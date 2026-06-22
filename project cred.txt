@@ -1,0 +1,5 @@
+| Role    | Email                                         | Password    |
+| ------- | --------------------------------------------- | ----------- |
+| Admin   | [admin@mmspa.com](mailto:admin@mmspa.com)     | password123 |
+| Manager | [manager@mmspa.com](mailto:manager@mmspa.com) | password123 |
+| Staff   | [staff@mmspa.com](mailto:staff@mmspa.com)     | password123 |
