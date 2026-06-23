@@ -1,4 +1,4 @@
-@extends('layouts.app')
+
 @extends('layouts.dashboard')
 
 @section('header', 'Appointments')
@@ -326,7 +326,7 @@
      class="hidden fixed inset-0 z-50 overflow-y-auto"
      role="dialog" aria-modal="true" aria-labelledby="walkInTitle">
 
-    <div class="flex min-h-full items-end sm:items-center justify-center p-4">
+    <div class="flex min-h-full items-center justify-center p-4">
         <div id="walkInBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
 
         <div class="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+
 @extends('layouts.dashboard')
 @section('header', 'Service Management')
 @section('subheader', 'Manage pricing, duration, and offerings')
@@ -67,7 +67,7 @@
 
 {{-- ===================== CREATE MODAL ===================== --}}
 <div id="createModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="flex min-h-full items-end sm:items-center justify-center p-4">
+    <div class="flex min-h-screen items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCreateModal()"></div>
         <div class="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
             <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -119,7 +119,7 @@
 
 {{-- ===================== EDIT MODAL ===================== --}}
 <div id="editModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="flex min-h-full items-end sm:items-center justify-center p-4">
+    <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeEditModal()"></div>
         <div class="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
             <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -172,7 +172,7 @@
 
 {{-- ===================== DELETE MODAL ===================== --}}
 <div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="flex min-h-full items-end sm:items-center justify-center p-4">
+    <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
         <div class="relative w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden">
             <div class="px-6 py-5">

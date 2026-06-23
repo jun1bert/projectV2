@@ -42,6 +42,19 @@ h1,h2,h3 {
     justify-content: center;
     margin-top: 20px;
 }
+
+/* Responsive table/cards toggle */
+#desktopTable { display: none !important; }
+#mobileCards  { display: block !important; }
+@media (min-width: 768px) {
+    #desktopTable { display: block !important; }
+    #mobileCards  { display: none !important; }
+}
+
+/* Fix: prevent flex parent from overriding visibility */
+main > * {
+    flex-shrink: 0;
+}
 </style>
 </head>
 
@@ -62,7 +75,7 @@ h1,h2,h3 {
     @include('layouts.partials.sidebar')
 
     <!-- MAIN CONTENT -->
-    <div class="flex-1 md:ml-64 w-full min-h-screen flex flex-col">
+    <div class="flex-1 md:ml-64 w-full min-h-screen">
 
         <!-- HEADER -->
         <header class="glass border-b px-4 md:px-6 py-5">

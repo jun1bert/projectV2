@@ -198,16 +198,51 @@ class AppointmentPaymentController extends Controller
                         ? round($servicePrice * ($rule->value / 100), 2)
                         : round($rule->value, 2); // fixed amount
 
-                    StaffCommission::create([
-                        'staff_id'          => $staffId,
-                        'appointment_id'    => $appointment->id,
-                        'service_id'        => $serviceId,
-                        'service_amount'    => $servicePrice,
-                        'commission_rate'   => $rule->value,
-                        'commission_amount' => $commissionAmount,
-                        'status'            => 'pending',
-                        'earned_at'         => now(),
-                    ]);
+                    if ($staffId && $servicePrice > 0) {
+    $serviceId = $appointment->service_id ?? null;
+
+    $rule = CommissionRule::where('is_active', true)
+        ->where(function ($q) use ($staffId, $serviceId) {
+            $q->orWhere(function ($q) use ($staffId, $serviceId) {
+                $q->where('staff_id', $staffId)->where('service_id', $serviceId);
+            })->orWhere(function ($q) use ($staffId) {
+                $q->where('staff_id', $staffId)->whereNull('service_id');
+            })->orWhere(function ($q) use ($serviceId) {
+                $q->whereNull('staff_id')->where('service_id', $serviceId);
+            })->orWhere(function ($q) {
+                $q->whereNull('staff_id')->whereNull('service_id');
+            });
+        })
+        ->orderByDesc('priority')
+        ->first();
+
+    if ($rule) {
+        $commissionAmount = $rule->type === 'percentage'
+            ? round($servicePrice * ($rule->value / 100), 2)
+            : round($rule->value, 2);
+
+        StaffCommission::firstOrCreate(
+            ['appointment_id' => $appointment->id],
+            [
+                'staff_id'          => $staffId,
+                'service_id'        => $serviceId,
+                'service_amount'    => $servicePrice,
+                'commission_rate'   => $rule->value,
+                'commission_amount' => $commissionAmount,
+                'status'            => 'pending',
+                'earned_at'         => now(),
+            ]
+        );
+    }
+}
+// Auto-mark commission as paid when invoice is created
+$existingCommission = StaffCommission::where('appointment_id', $appointment->id)->first();
+if ($existingCommission && $existingCommission->status !== 'paid') {
+    $existingCommission->update([
+        'status'    => 'paid',
+        'earned_at' => now(),
+    ]);
+}
                 }
             }
 

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+
 @extends('layouts.dashboard')
 @section('header', 'User Management')
 @section('subheader', 'Manage staff accounts, roles, and permissions')
@@ -81,27 +81,7 @@
             </td>
 
             <td class="px-5 py-4 text-gray-500 text-xs">{{ $u->email }}</td>
-
-            <td class="px-5 py-4">
-                @if($canManage)
-                <select class="role-select px-3 py-1.5 rounded-lg text-xs border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#c8a96a]/50 transition"
-                        data-id="{{ $u->id }}">
-                    <option value="admin"      @selected($u->role=='admin')>Admin</option>
-                    <option value="management" @selected($u->role=='management')>Management</option>
-                    <option value="staff"      @selected($u->role=='staff')>Staff</option>
-                    <option value="customer"   @selected($u->role=='customer')>Customer</option>
-                </select>
-                @else
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                    @if($u->role=='admin')      bg-[#c8a96a]/10 text-[#8a6a30]  ring-1 ring-[#c8a96a]/30
-                    @elseif($u->role=='management') bg-[#3a2a22]/10 text-[#3a2a22] ring-1 ring-[#3a2a22]/20
-                    @elseif($u->role=='staff')  bg-blue-50 text-blue-700 ring-1 ring-blue-200
-                    @else                       bg-gray-100 text-gray-600 ring-1 ring-gray-200
-                    @endif">
-                    {{ ucfirst($u->role) }}
-                </span>
-                @endif
-            </td>
+            <td class="px-5 py-4 text-gray-500 text-xs">{{ $u->role }}</td>
 
             <td class="px-5 py-4 text-xs text-gray-400">
                 {{ $u->created_at->format('M d, Y') }}
@@ -235,7 +215,7 @@
 {{-- ===================== ADD USER MODAL ===================== --}}
 @if($canManage)
 <div id="userModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="flex min-h-full items-end sm:items-center justify-center p-4">
+    <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal()"></div>
         <div class="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
 
@@ -297,7 +277,7 @@
 
 {{-- ===================== EDIT USER MODAL ===================== --}}
 <div id="editModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="flex min-h-full items-end sm:items-center justify-center p-4">
+    <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeEditModal()"></div>
         <div class="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
 
@@ -361,7 +341,7 @@
 
 {{-- ===================== DELETE USER MODAL ===================== --}}
 <div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="flex min-h-full items-end sm:items-center justify-center p-4">
+    <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
         <div class="relative w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden">
             <div class="px-6 py-5">
@@ -417,19 +397,6 @@ function filterUsers() {
 searchInput.addEventListener('input', filterUsers);
 roleFilter.addEventListener('change', filterUsers);
 
-// ROLE UPDATE (inline select)
-document.querySelectorAll('.role-select').forEach(select => {
-    select.addEventListener('change', async function () {
-        await fetch(`/staff/${this.dataset.id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ role: this.value })
-        });
-    });
-});
 
 // ADD USER MODAL
 function openModal() {
@@ -443,12 +410,13 @@ function closeModal() {
 
 // EDIT USER MODAL
 function openEditModal(id, name, email, role) {
-    document.getElementById('editModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    document.getElementById('editForm').action = `/staff/${id}`;
-    document.getElementById('edit_name').value  = name;
+    document.getElementById('edit_name').value = name;
     document.getElementById('edit_email').value = email;
-    document.getElementById('edit_role').value  = role;
+    document.getElementById('edit_role').value = role;
+
+    document.getElementById('editForm').action = `/staff/${id}`;
+
+    document.getElementById('editModal').classList.remove('hidden');
 }
 function closeEditModal() {
     document.getElementById('editModal').classList.add('hidden');

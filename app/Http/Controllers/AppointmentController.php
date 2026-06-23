@@ -21,21 +21,21 @@ class AppointmentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'full_name' => 'required',
+            'full_name'      => 'required',
             'contact_number' => 'required',
-            'service_id' => 'required|exists:services,id',
-            'date' => 'required',
-            'time' => 'required',
+            'service_id'     => 'required|exists:services,id',
+            'date'           => 'required',
+            'time'           => 'required',
         ]);
 
         Appointment::create([
-            'full_name' => $request->full_name,
+            'full_name'      => $request->full_name,
             'contact_number' => $request->contact_number,
-            'service_id' => $request->service_id,
-            'date' => $request->date,
-            'time' => $request->time,
-            'notes' => $request->notes,
-            'status' => 'pending',
+            'service_id'     => $request->service_id,
+            'date'           => $request->date,
+            'time'           => $request->time,
+            'notes'          => $request->notes,
+            'status'         => 'pending',
         ]);
 
         return redirect('/#book')
@@ -49,16 +49,14 @@ class AppointmentController extends Controller
     */
     public function dashboard()
     {
-        $user = Auth::user();
+        $user  = Auth::user();
         $query = Appointment::query();
 
         if (in_array($user->role, ['admin', 'management'])) {
             $appointments = $query->latest()->get();
-        }
-        elseif ($user->role === 'staff') {
+        } elseif ($user->role === 'staff') {
             $appointments = $query->where('assigned_to', $user->id)->latest()->get();
-        }
-        else {
+        } else {
             $appointments = $query->where('contact_number', $user->phone)->latest()->get();
         }
 
@@ -77,12 +75,12 @@ class AppointmentController extends Controller
         }
 
         $appointments = Appointment::with(['service', 'invoice'])->latest()->paginate(8);
-        $staff = User::where('role', 'staff')->get();
-        $services = Service::all();
+        $staff        = User::where('role', 'staff')->get();
+        $services     = Service::all();
 
-       return response()
-        ->view('appointments.index', compact('appointments', 'staff', 'services'))
-        ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return response()
+            ->view('appointments.index', compact('appointments', 'staff', 'services'))
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
     /*
@@ -97,11 +95,11 @@ class AppointmentController extends Controller
         }
 
         $request->validate([
-            'status' => 'required|in:pending,confirmed,rejected,completed',
-            // Must actually be a staff member, not just any existing user
+            'status'      => 'required|in:pending,confirmed,rejected,completed',
             'assigned_to' => 'nullable|exists:users,id',
         ]);
 
+        // Validate that assigned_to is actually a staff member
         if ($request->filled('assigned_to')) {
             $isStaff = User::where('id', $request->assigned_to)
                 ->where('role', 'staff')
@@ -119,22 +117,17 @@ class AppointmentController extends Controller
             $appointment = DB::transaction(function () use ($request, $id) {
 
                 $appointment = Appointment::findOrFail($id);
-                $oldStatus = $appointment->status;
+                $oldStatus   = $appointment->status;
 
                 $appointment->status = $request->status;
 
                 /*
-                |--------------------------------------------------------------------------
+                |--------------------------------------------------------------
                 | ASSIGN / UNASSIGN STAFF
-                |--------------------------------------------------------------------------
+                |--------------------------------------------------------------
                 */
-                if ($request->status === 'confirmed') {
-                    // Only touch assigned_to if the request actually sent one,
-                    // so re-confirming without resending assigned_to doesn't
-                    // silently wipe an existing assignment.
-                    if ($request->filled('assigned_to')) {
-                        $appointment->assigned_to = $request->assigned_to;
-                    }
+                if ($request->status === 'confirmed' && $request->filled('assigned_to')) {
+                    $appointment->assigned_to = $request->assigned_to;
                 }
 
                 if ($request->status === 'rejected') {
@@ -144,39 +137,28 @@ class AppointmentController extends Controller
                 $appointment->save();
 
                 /*
-                |--------------------------------------------------------------------------
-                | COMPLETED HOOK (RECEIPT STARTS HERE)
-                |--------------------------------------------------------------------------
+                |--------------------------------------------------------------
+                | COMMISSION — only on FIRST confirmation, only if staff assigned
+                | Uses firstOrCreate internally via CommissionService so no
+                | duplicate entries are ever inserted.
+                |--------------------------------------------------------------
                 */
-                if ($request->status === 'completed') {
-                    // we will build:
-                    // - items used
-                    // - inventory deduction
-                    // - receipt generation
-                }
-
-                /*
-                |--------------------------------------------------------------------------
-                | COMMISSION LOGIC (SINGLE SOURCE OF TRUTH)
-                |--------------------------------------------------------------------------
-                */
-                $commissionService = app(CommissionService::class);
-
-                // CREATE commission ONLY on FIRST confirmation
                 if (
                     $request->status === 'confirmed' &&
-                    $oldStatus !== 'confirmed' &&
+                    $oldStatus !== 'confirmed'       &&
                     $appointment->assigned_to
                 ) {
-                    $commissionService->createPendingCommission($appointment);
+                    app(CommissionService::class)
+                        ->createPendingCommission($appointment);
                 }
 
                 return $appointment;
             });
+
         } catch (\Exception $e) {
             Log::error('Failed to update appointment status', [
                 'appointment_id' => $id,
-                'error' => $e->getMessage(),
+                'error'          => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -187,8 +169,8 @@ class AppointmentController extends Controller
 
         return response()->json([
             'success' => true,
-            'status' => $appointment->status,
-            'message' => 'Status updated successfully.'
+            'status'  => $appointment->status,
+            'message' => 'Status updated successfully.',
         ]);
     }
 
@@ -199,7 +181,7 @@ class AppointmentController extends Controller
     */
     public function show($id)
     {
-        $user = Auth::user();
+        $user        = Auth::user();
         $appointment = Appointment::findOrFail($id);
 
         $isStaffOrAdmin = in_array($user->role, ['admin', 'management'])
@@ -226,12 +208,12 @@ class AppointmentController extends Controller
         }
 
         $validated = $request->validate([
-            'full_name' => 'required',
+            'full_name'      => 'required',
             'contact_number' => 'required',
-            'service_id' => 'required|exists:services,id',
-            'date' => 'required',
-            'time' => 'required',
-            'assigned_to' => 'nullable|exists:users,id',
+            'service_id'     => 'required|exists:services,id',
+            'date'           => 'required',
+            'time'           => 'required',
+            'assigned_to'    => 'nullable|exists:users,id',
         ]);
 
         if ($request->filled('assigned_to')) {
@@ -251,25 +233,22 @@ class AppointmentController extends Controller
             $appointment = DB::transaction(function () use ($validated, $request) {
 
                 $appointment = Appointment::create([
-                    'full_name' => $validated['full_name'],
+                    'full_name'      => $validated['full_name'],
                     'contact_number' => $validated['contact_number'],
-                    'service_id' => $validated['service_id'],
-                    'date' => $validated['date'],
-                    'time' => $validated['time'],
-                    'status' => 'confirmed',
-                    'booking_type' => 'walk-in',
-                    'assigned_to' => $request->assigned_to,
+                    'service_id'     => $validated['service_id'],
+                    'date'           => $validated['date'],
+                    'time'           => $validated['time'],
+                    'status'         => 'confirmed',
+                    'booking_type'   => 'walk-in',
+                    'assigned_to'    => $request->assigned_to,
                 ]);
 
                 /*
-                |--------------------------------------------------------------------------
-                | COMMISSION (WALK-IN SAFETY CHECK)
-                |--------------------------------------------------------------------------
+                |--------------------------------------------------------------
+                | COMMISSION (walk-in is immediately confirmed)
+                |--------------------------------------------------------------
                 */
-                if (
-                    $appointment->assigned_to &&
-                    $appointment->status === 'confirmed'
-                ) {
+                if ($appointment->assigned_to) {
                     app(CommissionService::class)
                         ->createPendingCommission($appointment);
                 }
@@ -278,9 +257,9 @@ class AppointmentController extends Controller
             });
 
             return response()->json([
-                'success' => true,
-                'message' => 'Walk-in appointment created successfully.',
-                'appointment' => $appointment
+                'success'     => true,
+                'message'     => 'Walk-in appointment created successfully.',
+                'appointment' => $appointment,
             ]);
 
         } catch (\Exception $e) {
@@ -290,7 +269,7 @@ class AppointmentController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create walk-in appointment. Please try again.'
+                'message' => 'Failed to create walk-in appointment. Please try again.',
             ], 500);
         }
     }

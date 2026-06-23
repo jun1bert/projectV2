@@ -34,19 +34,29 @@ class StaffController extends Controller
     }
 
     public function update(Request $request, $id)
-    {
-        $user = User::findOrFail($id);
+{
+    $user = User::findOrFail($id);
 
-        $user->update([
-            'role' => $request->role
-        ]);
+    $request->validate([
+        'name' => 'required',
+        'email' => 'required|email|unique:users,email,' . $id,
+        'role' => 'required',
+    ]);
 
-        return response()->json(['success' => true]);
+    $data = [
+        'name'  => $request->name,
+        'email' => $request->email,
+        'role'  => $request->role,
+    ];
+
+    if ($request->filled('password')) {
+        $data['password'] = Hash::make($request->password);
     }
 
-    public function destroy($id)
-    {
-        User::findOrFail($id)->delete();
-        return back();
-    }
+    $user->update($data);
+
+    return redirect()
+        ->route('staff.index')
+        ->with('success', 'User updated successfully.');
+}
 }

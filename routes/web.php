@@ -14,6 +14,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AppointmentPaymentController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -196,4 +197,11 @@ Route::get('/invoices/{id}/receipt', [InvoiceController::class, 'receipt'])
     ->middleware(['auth', 'role:admin,management,staff'])
     ->name('invoices.receipt');
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/reports', [ReportController::class, 'index'])
+        ->name('reports.index');
+});
+
+
+Route::get('/reports/print', [ReportController::class, 'print'])->name('reports.print');
 require __DIR__.'/auth.php';

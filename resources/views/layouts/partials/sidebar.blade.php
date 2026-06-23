@@ -36,7 +36,7 @@
                 📊 Commission
             </a>
 
-            <a href="#" class="block hover:text-yellow-300">
+            <a href="/reports" class="block hover:text-yellow-300">
                 📈 Reports
             </a>
                 <a href="/inventory" class="block hover:text-yellow-300">
