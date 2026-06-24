@@ -12,7 +12,7 @@ class AdminUserSeeder extends Seeder
     {
         // ADMIN
         User::updateOrCreate(
-            ['email' => 'admin@mmspa.com'],
+            ['email' => 'admin@spa.com'],
             [
                 'name' => 'System Admin',
                 'password' => Hash::make('password123'),
@@ -22,7 +22,7 @@ class AdminUserSeeder extends Seeder
 
         // MANAGER
         User::updateOrCreate(
-            ['email' => 'manager@mmspa.com'],
+            ['email' => 'manager@spa.com'],
             [
                 'name' => 'Spa Manager',
                 'password' => Hash::make('password123'),
@@ -32,9 +32,18 @@ class AdminUserSeeder extends Seeder
 
         // STAFF
         User::updateOrCreate(
-            ['email' => 'staff@mmspa.com'],
+            ['email' => 'staff1@spa.com'],
             [
-                'name' => 'Front Desk Staff',
+                'name' => 'Staff Member 1',
+                'password' => Hash::make('password123'),
+                'role' => 'staff',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'staff2@spa.com'],
+            [
+                'name' => 'Staff Member 2',
                 'password' => Hash::make('password123'),
                 'role' => 'staff',
             ]

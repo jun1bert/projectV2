@@ -15,6 +15,8 @@ use App\Http\Controllers\AppointmentPaymentController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\GalleryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -202,6 +204,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('reports.index');
 });
 
+Route::prefix('gallery')->name('gallery.')->middleware('auth')->group(function () {
+    Route::get('/',                          [GalleryController::class, 'index'])->name('index');
+    Route::post('/',                         [GalleryController::class, 'store'])->name('store');
+    Route::patch('/{image}/toggle-publish',  [GalleryController::class, 'togglePublish'])->name('togglePublish');
+    Route::delete('/{image}',                [GalleryController::class, 'destroy'])->name('destroy');
+});
+Route::get('/', [WelcomeController::class, 'index']);
 
-Route::get('/reports/print', [ReportController::class, 'print'])->name('reports.print');
+
+Route::get('/reports/download', [ReportController::class, 'downloadReport'])
+    ->name('reports.download');
 require __DIR__.'/auth.php';

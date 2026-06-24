@@ -22,7 +22,7 @@ class ReportController extends Controller
 
             $totalAppointments = (clone $appointmentsQuery)->count();
             $completed         = (clone $appointmentsQuery)->where('status', 'completed')->count();
-            $cancelled         = (clone $appointmentsQuery)->where('status', 'cancelled')->count();
+            $rejected          = (clone $appointmentsQuery)->where('status', 'rejected')->count();
             $pending           = (clone $appointmentsQuery)->where('status', 'pending')->count();
 
             $totalRevenue = Appointment::whereBetween('appointments.created_at', [$from, $to])
@@ -57,7 +57,7 @@ class ReportController extends Controller
 
             return view('reports.index', compact(
                 'range', 'from', 'to',
-                'totalAppointments', 'completed', 'cancelled', 'pending',
+                'totalAppointments', 'completed', 'rejected', 'pending',
                 'totalRevenue', 'totalCommission',
                 'topServices',
                 'inventoryStock', 'inventoryUsed'
@@ -82,7 +82,6 @@ class ReportController extends Controller
 
         $totalAppointments = (clone $appointmentsQuery)->count();
         $completed         = (clone $appointmentsQuery)->where('status', 'completed')->count();
-        $cancelled         = (clone $appointmentsQuery)->where('status', 'cancelled')->count();
         $pending           = (clone $appointmentsQuery)->where('status', 'pending')->count();
         $confirmed         = (clone $appointmentsQuery)->where('status', 'confirmed')->count();
         $rejected          = (clone $appointmentsQuery)->where('status', 'rejected')->count();
@@ -159,7 +158,7 @@ class ReportController extends Controller
 
         return view('reports.print', compact(
             'range', 'from', 'to',
-            'totalAppointments', 'completed', 'cancelled', 'pending', 'confirmed', 'rejected',
+            'totalAppointments', 'completed', 'rejected', 'pending', 'confirmed',
             'totalRevenue', 'totalCommission',
             'topServices',
             'appointments',
@@ -216,11 +215,103 @@ class ReportController extends Controller
 
 public function downloadReport(Request $request)
 {
-    $data = $this->getReportData($request); // reuse your existing logic
+    [$from, $to, $range] = $this->resolveDateRange($request);
 
-    $pdf = Pdf::loadView('reports.pdf', $data)
-        ->setPaper('a4', 'portrait');
+    $appointmentsQuery = Appointment::whereBetween('created_at', [$from, $to]);
 
-    return $pdf->download('business-report.pdf');
+    $totalAppointments = (clone $appointmentsQuery)->count();
+    $completed         = (clone $appointmentsQuery)->where('status', 'completed')->count();
+    $rejected          = (clone $appointmentsQuery)->where('status', 'rejected')->count();
+    $pending           = (clone $appointmentsQuery)->where('status', 'pending')->count();
+    $confirmed         = (clone $appointmentsQuery)->where('status', 'confirmed')->count();
+
+    $totalRevenue = Appointment::whereBetween('appointments.created_at', [$from, $to])
+        ->where('appointments.status', 'completed')
+        ->join('services', 'appointments.service_id', '=', 'services.id')
+        ->sum('services.price');
+
+    $totalCommission = StaffCommission::whereHas('appointment', function ($q) use ($from, $to) {
+        $q->whereBetween('created_at', [$from, $to]);
+    })->sum('commission_amount');
+
+    $topServices = Appointment::selectRaw('service_id, COUNT(*) as total')
+        ->whereBetween('created_at', [$from, $to])
+        ->groupBy('service_id')
+        ->orderByDesc('total')
+        ->with('service')
+        ->limit(10)
+        ->get();
+
+    $appointments = Appointment::with(['service', 'assignedStaff', 'invoice.items'])
+        ->whereBetween('created_at', [$from, $to])
+        ->orderBy('date')
+        ->orderBy('time')
+        ->get();
+
+    $staffCommissions = StaffCommission::with(['staff', 'service', 'appointment'])
+        ->whereHas('appointment', function ($q) use ($from, $to) {
+            $q->whereBetween('created_at', [$from, $to]);
+        })
+        ->get()
+        ->groupBy('staff_id')
+        ->map(function ($commissions) {
+            $staff = $commissions->first()->staff;
+
+            return [
+                'name'    => $staff->name ?? 'Unknown',
+                'total'   => $commissions->sum('commission_amount'),
+                'pending' => $commissions->where('status', 'pending')->sum('commission_amount'),
+                'paid'    => $commissions->where('status', 'paid')->sum('commission_amount'),
+                'count'   => $commissions->count(),
+                'items'   => $commissions,
+            ];
+        })
+        ->sortByDesc('total')
+        ->values();
+
+    $inventoryStock = Product::orderBy('name')->get();
+
+    $inventoryUsed = InvoiceItem::where('type', 'item')
+        ->whereHas('invoice', function ($q) use ($from, $to) {
+            $q->whereHas('appointment', function ($q2) use ($from, $to) {
+                $q2->whereBetween('date', [$from, $to])
+                   ->where('status', 'completed');
+            });
+        })
+        ->get()
+        ->groupBy('name')
+        ->map(function ($items) {
+            return [
+                'name'       => $items->first()->name,
+                'total_qty'  => $items->sum('qty'),
+                'total_cost' => $items->sum('subtotal'),
+            ];
+        })
+        ->values();
+
+    $totalInventoryCost = $inventoryUsed->sum('total_cost');
+
+    $pdf = Pdf::loadView('reports.print', compact(
+        'range',
+        'from',
+        'to',
+        'totalAppointments',
+        'completed',
+        'rejected',
+        'pending',
+        'confirmed',
+        'totalRevenue',
+        'totalCommission',
+        'topServices',
+        'appointments',
+        'staffCommissions',
+        'inventoryStock',
+        'inventoryUsed',
+        'totalInventoryCost'
+    ))->setPaper('a4', 'portrait');
+
+    return $pdf->download(
+        'business-report-' . now()->format('Ymd-His') . '.pdf'
+    );
 }
 }

@@ -11,6 +11,7 @@ class StaffController extends Controller
     public function index()
     {
         $users = User::latest()->paginate(10);
+
         return view('staff.index', compact('users'));
     }
 
@@ -18,9 +19,9 @@ class StaffController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'email' => 'required|email|unique:users',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
-            'role' => 'required'
+            'role' => 'required',
         ]);
 
         User::create([
@@ -30,33 +31,53 @@ class StaffController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        return back();
+        return redirect()
+            ->route('staff.index')
+            ->with('success', 'User created successfully.');
     }
 
     public function update(Request $request, $id)
-{
-    $user = User::findOrFail($id);
+    {
+        $user = User::findOrFail($id);
 
-    $request->validate([
-        'name' => 'required',
-        'email' => 'required|email|unique:users,email,' . $id,
-        'role' => 'required',
-    ]);
+        $request->validate([
+            'name' => 'required',
+            'email' => 'required|email|unique:users,email,' . $id,
+            'role' => 'required',
+            'password' => 'nullable|min:6',
+        ]);
 
-    $data = [
-        'name'  => $request->name,
-        'email' => $request->email,
-        'role'  => $request->role,
-    ];
+        $data = [
+            'name'  => $request->name,
+            'email' => $request->email,
+            'role'  => $request->role,
+        ];
 
-    if ($request->filled('password')) {
-        $data['password'] = Hash::make($request->password);
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
+
+        return redirect()
+            ->route('staff.index')
+            ->with('success', 'User updated successfully.');
     }
 
-    $user->update($data);
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
 
-    return redirect()
-        ->route('staff.index')
-        ->with('success', 'User updated successfully.');
-}
+        if ($user->role === 'admin') {
+            return redirect()
+                ->route('staff.index')
+                ->with('error', 'Admin account cannot be deleted.');
+        }
+
+        $user->delete();
+
+        return redirect()
+            ->route('staff.index')
+            ->with('success', 'Staff deleted successfully.');
+    }
 }

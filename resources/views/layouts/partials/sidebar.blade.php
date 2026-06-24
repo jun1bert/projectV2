@@ -32,6 +32,7 @@
             <a href="/staff" class="block hover:text-yellow-300">
                 👩‍💼 Staff
             </a>
+
             <a href="/commissions" class="block hover:text-yellow-300">
                 📊 Commission
             </a>
@@ -39,10 +40,18 @@
             <a href="/reports" class="block hover:text-yellow-300">
                 📈 Reports
             </a>
-                <a href="/inventory" class="block hover:text-yellow-300">
-                    📦 Inventory
-                </a>
 
+            <a href="/inventory" class="block hover:text-yellow-300">
+                📦 Inventory
+            </a>
+
+        @endif
+
+        <!-- GALLERY (ADMIN + MANAGEMENT + STAFF) -->
+        @if(in_array(auth()->user()->role, ['admin','management','staff']))
+            <a href="{{ route('gallery.index') }}" class="block hover:text-yellow-300">
+                🖼️ Gallery
+            </a>
         @endif
 
     </nav>

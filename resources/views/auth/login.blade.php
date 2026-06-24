@@ -41,7 +41,7 @@ body {
                 </h1>
 
                 <p class="text-sm text-white/60 mt-2">
-                    Luxury Spa Management System
+                    Management System
                 </p>
 
                 <div class="w-14 h-[2px] bg-[#c8a96a] mx-auto mt-4 rounded-full"></div>
@@ -120,7 +120,7 @@ body {
 
         <!-- FOOTER -->
         <p class="text-center text-xs text-white/40 mt-6">
-            Secure access • Martinis & Manicures © {{ date('Y') }}
+            Martinis & Manicures © {{ date('Y') }}
         </p>
 
     </div>
