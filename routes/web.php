@@ -13,7 +13,6 @@ use App\Http\Controllers\CommissionRuleController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AppointmentPaymentController;
 use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\GalleryController;
@@ -23,11 +22,8 @@ use App\Http\Controllers\GalleryController;
 | PUBLIC
 |--------------------------------------------------------------------------
 */
-Route::get('/', function () {
-    return view('welcome', [
-        'services' => \App\Models\Service::all()
-    ]);
-});
+Route::get('/', [WelcomeController::class, 'index'])
+    ->name('welcome');
 
 /*
 |--------------------------------------------------------------------------
@@ -56,7 +52,8 @@ Route::middleware(['auth', 'role:admin,staff,management'])->group(function () {
     Route::get('/appointments', [AppointmentController::class, 'index'])
         ->name('appointments.index');
 
-    Route::get('/appointments/{id}', [AppointmentController::class, 'show']);
+    Route::get('/appointments/{id}', [AppointmentController::class, 'show'])
+        ->name('appointments.show');
 });
 
 /*
@@ -72,57 +69,6 @@ Route::middleware(['auth', 'role:admin,management'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| STAFF MODULE
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'role:admin,management'])->group(function () {
-
-    Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
-    Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
-    Route::put('/staff/{id}', [StaffController::class, 'update'])->name('staff.update');
-    Route::delete('/staff/{id}', [StaffController::class, 'destroy'])->name('staff.destroy');
-});
-
-/*
-|--------------------------------------------------------------------------
-| SERVICES MODULE
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'role:admin,management'])->group(function () {
-
-    Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
-    Route::post('/services', [ServiceController::class, 'store'])->name('services.store');
-    Route::put('/services/{id}', [ServiceController::class, 'update'])->name('services.update');
-    Route::delete('/services/{id}', [ServiceController::class, 'destroy'])->name('services.destroy');
-});
-
-/*
-|--------------------------------------------------------------------------
-| PROFILE
-|--------------------------------------------------------------------------
-*/
-Route::middleware('auth')->group(function () {
-
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-/*
-|--------------------------------------------------------------------------
-| LOGOUT
-|--------------------------------------------------------------------------
-*/
-Route::post('/logout', function (Request $request) {
-    Auth::logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-
-    return redirect('/login');
-})->middleware('auth')->name('logout');
-
-/*
-|--------------------------------------------------------------------------
 | WALK-IN APPOINTMENT
 |--------------------------------------------------------------------------
 */
@@ -132,87 +78,198 @@ Route::post('/appointments/walk-in', [AppointmentController::class, 'storeWalkIn
 
 /*
 |--------------------------------------------------------------------------
-| COMMISSION SYSTEM (FIXED - SINGLE SOURCE OF TRUTH)
+| STAFF MODULE
 |--------------------------------------------------------------------------
-| Restricted to admin/management — this exposes staff pay data and lets
-| someone mark commissions as paid, so plain 'auth' alone isn't enough.
 */
 Route::middleware(['auth', 'role:admin,management'])->group(function () {
 
-    Route::get('/commissions', [CommissionController::class, 'index']);
+    Route::get('/staff', [StaffController::class, 'index'])
+        ->name('staff.index');
 
-    Route::get('/commissions/{staffId}/details', [CommissionController::class, 'details']);
+    Route::post('/staff', [StaffController::class, 'store'])
+        ->name('staff.store');
 
-    Route::post('/commissions/{id}/mark-paid', [CommissionController::class, 'markPaid']);
+    Route::put('/staff/{id}', [StaffController::class, 'update'])
+        ->name('staff.update');
+
+    Route::delete('/staff/{id}', [StaffController::class, 'destroy'])
+        ->name('staff.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| SERVICES MODULE
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:admin,management'])->group(function () {
+
+    Route::get('/services', [ServiceController::class, 'index'])
+        ->name('services.index');
+
+    Route::post('/services', [ServiceController::class, 'store'])
+        ->name('services.store');
+
+    Route::put('/services/{id}', [ServiceController::class, 'update'])
+        ->name('services.update');
+
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy'])
+        ->name('services.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| COMMISSION SYSTEM
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:admin,management'])->group(function () {
+
+    Route::get('/commissions', [CommissionController::class, 'index'])
+        ->name('commissions.index');
+
+    Route::get('/commissions/{staffId}/details', [CommissionController::class, 'details'])
+        ->name('commissions.details');
+
+    Route::post('/commissions/{id}/mark-paid', [CommissionController::class, 'markPaid'])
+        ->name('commissions.markPaid');
 });
 
 /*
 |--------------------------------------------------------------------------
 | COMMISSION RULES
 |--------------------------------------------------------------------------
-| Business configuration — admin/management only.
 */
 Route::middleware(['auth', 'role:admin,management'])->group(function () {
 
-    Route::get('/commission-rules', [CommissionRuleController::class, 'index']);
-    Route::post('/commission-rules', [CommissionRuleController::class, 'store']);
-    Route::post('/commission-rules/{id}/toggle', [CommissionRuleController::class, 'toggle']);
-    Route::delete('/commission-rules/{id}', [CommissionRuleController::class, 'destroy']);
+    Route::get('/commission-rules', [CommissionRuleController::class, 'index'])
+        ->name('commission-rules.index');
+
+    Route::post('/commission-rules', [CommissionRuleController::class, 'store'])
+        ->name('commission-rules.store');
+
+    Route::post('/commission-rules/{id}/toggle', [CommissionRuleController::class, 'toggle'])
+        ->name('commission-rules.toggle');
+
+    Route::delete('/commission-rules/{id}', [CommissionRuleController::class, 'destroy'])
+        ->name('commission-rules.destroy');
 });
 
 /*
 |--------------------------------------------------------------------------
 | INVENTORY MODULE
 |--------------------------------------------------------------------------
-| Staff need read/search access for the payment item-picker, but only
-| admin/management should be able to create, edit, or delete products.
 */
 Route::middleware(['auth', 'role:admin,management,staff'])->group(function () {
 
-    Route::get('/inventory', [ProductController::class, 'index']);
-    Route::get('/inventory/search', [ProductController::class, 'search']);
-    Route::get('/inventory/{id}', [ProductController::class, 'show']);
+    Route::get('/inventory', [ProductController::class, 'index'])
+        ->name('inventory.index');
+
+    Route::get('/inventory/search', [ProductController::class, 'search'])
+        ->name('inventory.search');
+
+    Route::get('/inventory/{id}', [ProductController::class, 'show'])
+        ->name('inventory.show');
 });
 
 Route::middleware(['auth', 'role:admin,management'])->group(function () {
 
-    Route::post('/inventory', [ProductController::class, 'store']);
-    Route::post('/inventory/stock-in', [ProductController::class, 'stockIn']);
-    Route::put('/inventory/{id}', [ProductController::class, 'update']);
-    Route::delete('/inventory/{id}', [ProductController::class, 'destroy']);
+    Route::post('/inventory', [ProductController::class, 'store'])
+        ->name('inventory.store');
+
+    Route::post('/inventory/stock-in', [ProductController::class, 'stockIn'])
+        ->name('inventory.stockIn');
+
+    Route::put('/inventory/{id}', [ProductController::class, 'update'])
+        ->name('inventory.update');
+
+    Route::delete('/inventory/{id}', [ProductController::class, 'destroy'])
+        ->name('inventory.destroy');
 });
 
 /*
 |--------------------------------------------------------------------------
-| APPOINTMENT PAYMENTS (ADMIN / MANAGEMENT / STAFF ONLY)
+| APPOINTMENT PAYMENTS
 |--------------------------------------------------------------------------
 */
 Route::post('/appointments/{id}/payment', [AppointmentPaymentController::class, 'store'])
-    ->middleware(['auth', 'role:admin,management,staff']);
+    ->middleware(['auth', 'role:admin,management,staff'])
+    ->name('appointments.payment.store');
 
 /*
 |--------------------------------------------------------------------------
-| RECEIPT (PRINTABLE)
+| RECEIPT
 |--------------------------------------------------------------------------
 */
 Route::get('/invoices/{id}/receipt', [InvoiceController::class, 'receipt'])
     ->middleware(['auth', 'role:admin,management,staff'])
     ->name('invoices.receipt');
 
-Route::middleware(['auth'])->group(function () {
+/*
+|--------------------------------------------------------------------------
+| REPORTS
+|--------------------------------------------------------------------------
+| Admin / Management Only
+*/
+Route::middleware(['auth', 'role:admin,management'])->group(function () {
+
     Route::get('/reports', [ReportController::class, 'index'])
         ->name('reports.index');
+
+    Route::get('/reports/download', [ReportController::class, 'downloadReport'])
+        ->name('reports.download');
 });
 
-Route::prefix('gallery')->name('gallery.')->middleware('auth')->group(function () {
-    Route::get('/',                          [GalleryController::class, 'index'])->name('index');
-    Route::post('/',                         [GalleryController::class, 'store'])->name('store');
-    Route::patch('/{image}/toggle-publish',  [GalleryController::class, 'togglePublish'])->name('togglePublish');
-    Route::delete('/{image}',                [GalleryController::class, 'destroy'])->name('destroy');
+/*
+|--------------------------------------------------------------------------
+| GALLERY MODULE
+|--------------------------------------------------------------------------
+*/
+Route::prefix('gallery')
+    ->name('gallery.')
+    ->middleware(['auth', 'role:admin,management'])
+    ->group(function () {
+
+        Route::get('/', [GalleryController::class, 'index'])
+            ->name('index');
+
+        Route::post('/', [GalleryController::class, 'store'])
+            ->name('store');
+
+        Route::patch('/{image}/toggle-publish', [GalleryController::class, 'togglePublish'])
+            ->name('togglePublish');
+
+        Route::delete('/{image}', [GalleryController::class, 'destroy'])
+            ->name('destroy');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| PROFILE
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')->group(function () {
+
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
 });
-Route::get('/', [WelcomeController::class, 'index']);
 
+/*
+|--------------------------------------------------------------------------
+| LOGOUT
+|--------------------------------------------------------------------------
+*/
+Route::post('/logout', function (Request $request) {
+    Auth::logout();
 
-Route::get('/reports/download', [ReportController::class, 'downloadReport'])
-    ->name('reports.download');
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/login');
+})->middleware('auth')->name('logout');
+
 require __DIR__.'/auth.php';
