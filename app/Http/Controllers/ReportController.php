@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use App\Models\Appointment;
 use App\Models\StaffCommission;
@@ -64,8 +65,14 @@ class ReportController extends Controller
             ));
 
         } catch (\Throwable $e) {
-            dd($e->getMessage(), $e->getFile(), $e->getLine());
-        }
+    Log::error('Report page failed', [
+        'message' => $e->getMessage(),
+        'file'    => $e->getFile(),
+        'line'    => $e->getLine(),
+    ]);
+
+    return back()->with('error', 'Unable to load report. Please try again.');
+}
     }
 
     /*

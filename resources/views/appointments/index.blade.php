@@ -20,6 +20,11 @@
         </svg>
     </button>
 </div>
+@if(session('error'))
+    <div class="alert alert-danger">
+        {{ session('error') }}
+    </div>
+@endif
 <script>
     setTimeout(() => {
         const t = document.getElementById('toast-success');
