@@ -37,6 +37,7 @@ Route::get('/dashboard', [AppointmentController::class, 'dashboard'])
 |--------------------------------------------------------------------------
 */
 Route::post('/appointments', [AppointmentController::class, 'store'])
+    ->middleware('throttle:5,1')
     ->name('appointments.store');
 
 /*
