@@ -1,272 +1,290 @@
-    @extends('layouts.dashboard')
+@extends('layouts.dashboard')
 
-    @section('header', 'Reports')
-    @section('subheader', 'System analytics and performance overview')
+@section('header', 'Reports')
+@section('subheader', 'Appointment, service, and revenue overview')
+<title><?= config('app.name') ?> | Reports</title>
+@section('content')
+<div class="space-y-6">
+    <form method="GET" action="{{ route('reports.index') }}" class="theme-panel rounded-2xl p-4 sm:p-5">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <select name="range" onchange="this.form.submit()" class="theme-field rounded-xl px-4 py-3 text-sm">
+                    <option value="today" @selected(($range ?? '') === 'today')>Today</option>
+                    <option value="yesterday" @selected(($range ?? '') === 'yesterday')>Yesterday</option>
+                    <option value="week" @selected(($range ?? '') === 'week')>This Week</option>
+                    <option value="month" @selected(($range ?? 'month') === 'month')>This Month</option>
+                    <option value="last_month" @selected(($range ?? '') === 'last_month')>Last Month</option>
+                    <option value="custom" @selected(($range ?? '') === 'custom')>Custom Range</option>
+                </select>
 
-    @section('content')
-
-    {{-- ===================== DATE RANGE FILTER ===================== --}}
-    <form method="GET" action="{{ route('reports.index') }}"
-        class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        
-    <a href="{{ route('reports.download', request()->query()) }}"
-   class="px-4 py-2.5 bg-[#c8a96a] hover:bg-[#b8955a] text-white text-sm font-medium rounded-xl transition">
-    Download PDF
-</a>
-
-        <div class="flex flex-col sm:flex-row gap-2 flex-1">
-            <select name="range" onchange="this.form.submit()"
-                    class="w-full sm:w-48 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-700
-                        focus:outline-none focus:ring-2 focus:ring-[#c8a96a]/50 focus:border-[#c8a96a] transition">
-                <option value="today"      @selected(($range ?? '') === 'today')>Today</option>
-                <option value="yesterday"  @selected(($range ?? '') === 'yesterday')>Yesterday</option>
-                <option value="week"       @selected(($range ?? '') === 'week')>This Week</option>
-                <option value="month"      @selected(($range ?? 'month') === 'month')>This Month</option>
-                <option value="last_month" @selected(($range ?? '') === 'last_month')>Last Month</option>
-                <option value="custom"     @selected(($range ?? '') === 'custom')>Custom range</option>
-            </select>
-
-            @if(($range ?? '') === 'custom')
-            <div class="flex gap-2">
-                <input type="date" name="from" value="{{ request('from') }}"
-                    class="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-700
-                            focus:outline-none focus:ring-2 focus:ring-[#c8a96a]/50 focus:border-[#c8a96a] transition">
-                <input type="date" name="to" value="{{ request('to') }}"
-                    class="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-700
-                            focus:outline-none focus:ring-2 focus:ring-[#c8a96a]/50 focus:border-[#c8a96a] transition">
-                <button type="submit"
-                        class="px-4 py-2.5 bg-[#c8a96a] hover:bg-[#b8955a] active:scale-95 text-white text-sm font-medium rounded-xl transition">
-                    Apply
-                </button>
+                @if(($range ?? '') === 'custom')
+                    <input type="date" name="from" value="{{ request('from') }}" class="theme-field rounded-xl px-4 py-3 text-sm">
+                    <input type="date" name="to" value="{{ request('to') }}" class="theme-field rounded-xl px-4 py-3 text-sm">
+                    <button type="submit" class="rounded-xl bg-[var(--desert-rock)] px-5 py-3 text-sm font-bold text-[var(--feather-white)] hover:bg-[#8f7663]">
+                        Apply
+                    </button>
+                @endif
             </div>
-            @endif
-        </div>
 
+            <a href="{{ route('reports.download', request()->query() + ['type' => 'summary']) }}"
+               data-private-download
+               class="rounded-xl bg-[var(--desert-rock)] px-5 py-3 text-center text-sm font-bold text-[var(--feather-white)] hover:bg-[#8f7663]">
+                Download Summary PDF
+            </a>
+        </div>
     </form>
 
-    {{-- ===================== KPI CARDS ===================== --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-
-        {{-- Total Appointments --}}
-        <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-[#3a2a22]/5 flex items-center justify-center shrink-0 mt-0.5">
-                <svg class="w-4.5 h-4.5 text-[#3a2a22]/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-            </div>
-            <div class="min-w-0">
-                <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Total Appointments</p>
-                <p class="text-2xl font-bold text-gray-900 leading-none">{{ $totalAppointments }}</p>
-            </div>
-        </div>
-
-        {{-- Completed --}}
-        <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
-                <svg class="w-4.5 h-4.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            </div>
-            <div class="min-w-0">
-                <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Completed</p>
-                <p class="text-2xl font-bold text-green-600 leading-none">{{ $completed }}</p>
-            </div>
-        </div>
-
-        {{-- Revenue --}}
-        <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-[#c8a96a]/10 flex items-center justify-center shrink-0 mt-0.5">
-                <svg class="w-4.5 h-4.5 text-[#c8a96a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                </svg>
-            </div>
-            <div class="min-w-0">
-                <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Revenue</p>
-                <p class="text-2xl font-bold text-gray-900 leading-none">₱{{ number_format($totalRevenue, 2) }}</p>
-            </div>
-        </div>
-
-        {{-- Commissions --}}
-        <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
-                <svg class="w-4.5 h-4.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
-            </div>
-            <div class="min-w-0">
-                <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Commissions</p>
-                <p class="text-2xl font-bold text-blue-600 leading-none">₱{{ number_format($totalCommission, 2) }}</p>
-            </div>
-        </div>
-
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <button type="button" data-report-target="summaryPanel" class="report-tile theme-card rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md">
+            <p class="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Total Appointments</p>
+            <p class="mt-2 text-2xl font-bold text-[var(--ink)]">{{ $totalAppointments }}</p>
+        </button>
+        <button type="button" data-report-target="salesPanel" class="report-tile theme-card rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md">
+            <p class="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Completed</p>
+            <p class="mt-2 text-2xl font-bold text-green-700">{{ $completed }}</p>
+            <p class="mt-1 text-xs font-semibold text-[var(--desert-rock)]">View sales</p>
+        </button>
+        <button type="button" data-report-target="clientsPanel" class="report-tile theme-card rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md">
+            <p class="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Pending</p>
+            <p class="mt-2 text-2xl font-bold text-amber-700">{{ $pending }}</p>
+            <p class="mt-1 text-xs font-semibold text-[var(--desert-rock)]">View clients</p>
+        </button>
+        <button type="button" data-report-target="salesPanel" class="report-tile theme-card rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md">
+            <p class="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Revenue</p>
+            <p class="mt-2 text-2xl font-bold text-[var(--ink)]">&#8369;{{ number_format($totalRevenue, 2) }}</p>
+            <p class="mt-1 text-xs font-semibold text-[var(--desert-rock)]">View sales</p>
+        </button>
     </div>
 
-    {{-- ===================== BOTTOM GRID ===================== --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {{-- STATUS BREAKDOWN --}}
-        <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-
-            <div class="px-5 py-4 border-b border-gray-50">
-                <h3 class="text-sm font-semibold text-gray-900">Appointment Status Breakdown</h3>
+    <div id="summaryPanel" class="report-panel grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section class="theme-card rounded-2xl">
+            <div class="border-b border-[var(--soft-sandstone)]/35 px-5 py-4">
+                <h3 class="text-sm font-bold text-[var(--ink)]">Appointment Status</h3>
             </div>
 
-            <div class="px-5 py-4 space-y-3">
+            <div class="space-y-4 p-5">
+                @foreach([
+                    ['Pending', $pending, 'bg-amber-400'],
+                    ['Confirmed', $confirmed, 'bg-[var(--desert-rock)]'],
+                    ['Completed', $completed, 'bg-green-500'],
+                    ['Cancelled', $cancelled, 'bg-red-400'],
+                ] as [$label, $count, $bar])
+                    @php $pct = $totalAppointments > 0 ? round($count / $totalAppointments * 100) : 0; @endphp
+                    <div>
+                        <div class="mb-1.5 flex items-center justify-between text-xs">
+                            <span class="font-semibold text-[var(--muted)]">{{ $label }}</span>
+                            <span class="font-bold text-[var(--ink)]">{{ $count }} <span class="font-semibold text-[var(--muted)]">({{ $pct }}%)</span></span>
+                        </div>
+                        <div class="h-2 overflow-hidden rounded-full bg-[var(--creamed-oat)]">
+                            <div class="h-full rounded-full {{ $bar }}" style="width: {{ $pct }}%"></div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </section>
 
-                {{-- Pending --}}
-                @php $pendingPct  = $totalAppointments > 0 ? round($pending  / $totalAppointments * 100) : 0; @endphp
-                @php $completedPct= $totalAppointments > 0 ? round($completed/ $totalAppointments * 100) : 0; @endphp
-                @php $rejectedPct= $totalAppointments > 0 ? round($rejected/ $totalAppointments * 100) : 0; @endphp
-
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-1.5">
-                        <span class="flex items-center gap-2">
-                            <span class="inline-block w-2 h-2 rounded-full bg-amber-400"></span>
-                            <span class="text-gray-600">Pending</span>
-                        </span>
-                        <span class="font-semibold text-gray-800">{{ $pending }} <span class="text-gray-400 font-normal">({{ $pendingPct }}%)</span></span>
-                    </div>
-                    <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-amber-400 rounded-full transition-all" style="width: {{ $pendingPct }}%"></div>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-1.5">
-                        <span class="flex items-center gap-2">
-                            <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-                            <span class="text-gray-600">Completed</span>
-                        </span>
-                        <span class="font-semibold text-gray-800">{{ $completed }} <span class="text-gray-400 font-normal">({{ $completedPct }}%)</span></span>
-                    </div>
-                    <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-green-500 rounded-full transition-all" style="width: {{ $completedPct }}%"></div>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="flex items-center justify-between text-xs mb-1.5">
-                        <span class="flex items-center gap-2">
-                            <span class="inline-block w-2 h-2 rounded-full bg-red-400"></span>
-                            <span class="text-gray-600">Rejected</span>
-                        </span>
-                        <span class="font-semibold text-gray-800">{{ $rejected }} <span class="text-gray-400 font-normal">({{ $rejectedPct }}%)</span></span>
-                    </div>
-                    <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-red-400 rounded-full transition-all" style="width: {{ $rejectedPct }}%"></div>
-                    </div>
-                </div>
-
+        <section class="theme-card overflow-hidden rounded-2xl">
+            <div class="border-b border-[var(--soft-sandstone)]/35 px-5 py-4">
+                <h3 class="text-sm font-bold text-[var(--ink)]">Top Services</h3>
             </div>
 
-        </div>
-
-        {{-- TOP SERVICES --}}
-        <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-
-            <div class="px-5 py-4 border-b border-gray-50">
-                <h3 class="text-sm font-semibold text-gray-900">Top Services</h3>
-            </div>
-
-            <table class="w-full text-sm">
+            <table class="theme-table">
                 <thead>
-                    <tr class="bg-[#3a2a22]/5 border-b border-gray-100 text-xs font-medium text-[#3a2a22]/70 uppercase tracking-wide">
-                        <th class="px-5 py-3 text-left">Service</th>
-                        <th class="px-5 py-3 text-right">Bookings</th>
+                    <tr>
+                        <th>Service</th>
+                        <th class="text-right">Bookings</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-50">
-                @forelse($topServices as $item)
-                    <tr class="hover:bg-[#faf7f2] transition-colors">
-                        <td class="px-5 py-3.5 text-gray-800">{{ $item->service->name ?? '—' }}</td>
-                        <td class="px-5 py-3.5 text-right">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                                        bg-[#c8a96a]/10 text-[#8a6a30] ring-1 ring-[#c8a96a]/30">
-                                {{ $item->total }}
-                            </span>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="2" class="px-5 py-12 text-center">
-                            <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                            </svg>
-                            <p class="text-gray-400 text-xs">No service data yet.</p>
-                        </td>
-                    </tr>
-                @endforelse
+                <tbody class="divide-y divide-[var(--soft-sandstone)]/30">
+                    @forelse($topServices as $item)
+                        <tr>
+                            <td class="px-5 py-3.5 text-[var(--ink)]">{{ $item->service->name ?? 'Unavailable' }}</td>
+                            <td class="px-5 py-3.5 text-right">
+                                <span class="rounded-full bg-[var(--creamed-oat)] px-3 py-1 text-xs font-bold text-[var(--desert-rock)]">
+                                    {{ $item->total }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="2" class="px-5 py-12 text-center text-sm text-[var(--muted)]">No service data yet.</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
-
-        </div>
-
+        </section>
     </div>
 
-    {{-- ===================== INVENTORY ===================== --}}
-    <div class="mt-4 bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-
-        <div class="px-5 py-4 border-b border-gray-50">
-            <h3 class="text-sm font-semibold text-gray-900">Inventory</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Consumption is within the selected date range</p>
+    <section id="salesPanel" class="report-panel theme-card hidden overflow-hidden rounded-2xl">
+        <div class="flex flex-col gap-3 border-b border-[var(--soft-sandstone)]/35 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-[var(--ink)]">Sales</h3>
+                <p class="mt-1 text-xs text-[var(--muted)]">Completed appointments within the selected range.</p>
+            </div>
+            <a href="{{ route('reports.download', request()->query() + ['type' => 'sales']) }}"
+               data-private-download
+               class="rounded-xl bg-[var(--desert-rock)] px-4 py-2.5 text-center text-xs font-bold text-[var(--feather-white)] hover:bg-[#8f7663]">
+                Download Sales PDF
+            </a>
         </div>
 
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="bg-[#3a2a22]/5 border-b border-gray-100 text-xs font-medium text-[#3a2a22]/70 uppercase tracking-wide">
-                    <th class="px-5 py-3 text-left">Product</th>
-                    <th class="px-5 py-3 text-center">Unit</th>
-                    <th class="px-5 py-3 text-right">Used</th>
-                    <th class="px-5 py-3 text-right">Stock Left</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-50">
-            @forelse($inventoryStock as $product)
-                @php
-                    $used  = $inventoryUsed[$product->name] ?? 0;
-                    $stock = $product->current_stock;
-                @endphp
-                <tr class="hover:bg-[#faf7f2] transition-colors">
-                    <td class="px-5 py-3.5 text-gray-800">{{ $product->name }}</td>
-                    <td class="px-5 py-3.5 text-center text-gray-500">{{ $product->unit ?? '—' }}</td>
-                    <td class="px-5 py-3.5 text-right">
-                        @if($used > 0)
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                                        bg-blue-50 text-blue-600 ring-1 ring-blue-200">
-                                {{ $used }}
-                            </span>
-                        @else
-                            <span class="text-gray-300 text-xs">—</span>
-                        @endif
-                    </td>
-                    <td class="px-5 py-3.5 text-right">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                            {{ $stock <= 0
-                                ? 'bg-red-50 text-red-500 ring-1 ring-red-200'
-                                : ($stock <= 5
-                                    ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-200'
-                                    : 'bg-green-50 text-green-600 ring-1 ring-green-200') }}">
-                            {{ $stock }}
-                        </span>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="4" class="px-5 py-12 text-center">
-                        <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
-                        </svg>
-                        <p class="text-gray-400 text-xs">No products found.</p>
-                    </td>
-                </tr>
-            @endforelse
-            </tbody>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="theme-table min-w-[720px]">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Client</th>
+                        <th>Contact</th>
+                        <th>Service</th>
+                        <th>Payment</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--soft-sandstone)]/30">
+                    @forelse($salesRows as $appointment)
+                    <tr>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $appointment->date }} {{ $appointment->time }}</td>
+                        <td class="px-5 py-3.5 text-[var(--ink)]">{{ $appointment->full_name }}</td>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">
+                            <span class="block">{{ $appointment->contact_number }}</span>
+                            @if($appointment->client_email)
+                            <span class="block text-xs">{{ $appointment->client_email }}</span>
+                            @endif
+                        </td>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $appointment->service->name ?? 'Unavailable' }}</td>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ ucfirst($appointment->invoice->payment_method ?? 'unpaid') }}</td>
+                        <td class="px-5 py-3.5 text-right font-bold text-[var(--desert-rock)]">&#8369;{{ number_format($appointment->service->price ?? 0, 2) }}</td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="px-5 py-12 text-center text-sm text-[var(--muted)]">No sales data for this period.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
 
+    <section id="clientsPanel" class="report-panel theme-card hidden overflow-hidden rounded-2xl">
+        <div class="flex flex-col gap-3 border-b border-[var(--soft-sandstone)]/35 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-[var(--ink)]">Client List</h3>
+                <p class="mt-1 text-xs text-[var(--muted)]">Private client contact list from appointments in this range.</p>
+            </div>
+            <a href="{{ route('reports.download', request()->query() + ['type' => 'clients']) }}"
+               data-private-download
+               class="rounded-xl bg-[var(--desert-rock)] px-4 py-2.5 text-center text-xs font-bold text-[var(--feather-white)] hover:bg-[#8f7663]">
+                Download Clients PDF
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="theme-table min-w-[680px]">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Contact</th>
+                        <th>Email</th>
+                        <th class="text-right">Visits</th>
+                        <th>Last Visit</th>
+                        <th class="text-right">Total Spent</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--soft-sandstone)]/30">
+                    @forelse($clientRows as $client)
+                    <tr>
+                        <td class="px-5 py-3.5 text-[var(--ink)]">{{ $client['name'] }}</td>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $client['contact'] }}</td>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $client['email'] ?? 'N/A' }}</td>
+                        <td class="px-5 py-3.5 text-right text-[var(--ink)]">{{ $client['visits'] }}</td>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $client['last_visit'] ?? 'N/A' }}</td>
+                        <td class="px-5 py-3.5 text-right font-bold text-[var(--desert-rock)]">&#8369;{{ number_format($client['total_spent'], 2) }}</td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="px-5 py-12 text-center text-sm text-[var(--muted)]">No client data for this period.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<div id="privacyModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <button type="button" class="fixed inset-0 bg-black/45 backdrop-blur-sm" onclick="closePrivacyModal()" aria-label="Close privacy warning"></button>
+
+        <div class="theme-card relative w-full max-w-md rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-[var(--ink)]">Private Data Warning</h3>
+            <p class="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+                This report may contain private client information, contact numbers, appointment history, and sales records.
+                Download only when authorized, store it securely, and do not share it outside approved business use.
+            </p>
+
+            <div class="mt-6 grid gap-2 sm:grid-cols-2">
+                <button type="button" onclick="closePrivacyModal()" class="rounded-xl border border-[var(--soft-sandstone)]/60 px-4 py-2.5 text-sm font-bold text-[var(--ink)] hover:bg-[var(--creamed-oat)]">
+                    Cancel
+                </button>
+                <a id="privacyConfirmLink" href="#" class="rounded-xl bg-[var(--desert-rock)] px-4 py-2.5 text-center text-sm font-bold text-[var(--feather-white)] hover:bg-[#8f7663]">
+                    I Understand, Download
+                </a>
+            </div>
+        </div>
     </div>
-    @endsection
+</div>
+
+<style>
+    .theme-field {
+        border: 1px solid rgba(164, 141, 120, .28);
+        background: rgba(250, 249, 246, .86);
+        color: var(--ink);
+        outline: none;
+    }
+
+    .theme-field:focus {
+        border-color: var(--desert-rock);
+        box-shadow: 0 0 0 3px rgba(164, 141, 120, .18);
+    }
+
+    .report-tile.is-active {
+        border-color: var(--desert-rock);
+        box-shadow: 0 16px 38px rgba(164, 141, 120, .18);
+    }
+</style>
+
+<script>
+const panels = document.querySelectorAll('.report-panel');
+const tiles = document.querySelectorAll('.report-tile');
+let pendingPrivateDownload = null;
+
+function showReportPanel(id) {
+    panels.forEach((panel) => panel.classList.toggle('hidden', panel.id !== id));
+    tiles.forEach((tile) => tile.classList.toggle('is-active', tile.dataset.reportTarget === id));
+}
+
+tiles.forEach((tile) => {
+    tile.addEventListener('click', () => showReportPanel(tile.dataset.reportTarget));
+});
+
+document.querySelectorAll('[data-private-download]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+        event.preventDefault();
+        pendingPrivateDownload = link.href;
+        document.getElementById('privacyConfirmLink').href = pendingPrivateDownload;
+        document.getElementById('privacyModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    });
+});
+
+function closePrivacyModal() {
+    document.getElementById('privacyModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    pendingPrivateDownload = null;
+}
+
+document.getElementById('privacyConfirmLink')?.addEventListener('click', () => {
+    closePrivacyModal();
+});
+</script>
+@endsection

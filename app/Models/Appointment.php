@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use App\Models\Service;
+use App\Models\ConsentForm;
 
 class Appointment extends Model
 {
     protected $fillable = [
         'full_name',
         'contact_number',
+        'email',
         'service_id',
         'date',
         'time',
@@ -18,7 +20,12 @@ class Appointment extends Model
         'status',
         'booking_type',
         'assigned_to',
-        'payment_status'
+        'payment_status',
+        'completion_notified_at',
+    ];
+
+    protected $casts = [
+        'completion_notified_at' => 'datetime',
     ];
 
     /*
@@ -45,4 +52,9 @@ class Appointment extends Model
 {
     return $this->hasOne(Invoice::class);
 }
+
+    public function consentForm()
+    {
+        return $this->hasOne(ConsentForm::class);
+    }
 }

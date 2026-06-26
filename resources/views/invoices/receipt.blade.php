@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Receipt #{{ $invoice->id }}</title>
 
 <style>
@@ -14,20 +15,21 @@
     box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
 }
 
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 11px;
-    line-height: 1.45;
-    color: #111;
     width: 76mm;
     margin: 0 auto;
     padding: 4mm 2mm;
     background: #fff;
+    color: #4d4037;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    line-height: 1.45;
 }
 
 .receipt {
@@ -45,22 +47,30 @@ body {
 }
 
 .receipt-title {
+    margin-bottom: 2px;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 1px;
     text-transform: uppercase;
-    margin-bottom: 2px;
 }
 
 .muted {
+    color: #817267;
     font-size: 10px;
-    color: #444;
 }
 
 .divider {
-    border: none;
-    border-top: 1px dashed #111;
     margin: 7px 0;
+    border: none;
+    border-top: 1px dashed #a48d78;
+}
+
+.section-title {
+    margin-bottom: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
 }
 
 .row {
@@ -68,11 +78,10 @@ body {
     justify-content: space-between;
     gap: 8px;
     padding: 2px 0;
-    font-size: 11px;
 }
 
 .row span:first-child {
-    color: #444;
+    color: #817267;
 }
 
 .row span:last-child {
@@ -80,19 +89,11 @@ body {
     text-align: right;
 }
 
-.section-title {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    margin-bottom: 4px;
-}
-
 table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 10.5px;
     table-layout: fixed;
+    font-size: 10.5px;
 }
 
 td {
@@ -102,31 +103,31 @@ td {
 }
 
 thead td {
-    font-weight: 700;
-    border-bottom: 1px solid #111;
+    border-bottom: 1px solid #a48d78;
     padding-bottom: 4px;
+    font-weight: 700;
 }
 
-.col-item  { width: 44%; }
-.col-qty   { width: 12%; text-align: right; }
+.col-item { width: 44%; }
+.col-qty { width: 12%; text-align: right; }
 .col-price { width: 22%; text-align: right; }
-.col-sub   { width: 22%; text-align: right; }
+.col-sub { width: 22%; text-align: right; }
 
 .total-box {
     margin-top: 4px;
 }
 
 .total-row {
+    margin-top: 4px;
+    border-top: 1px solid #a48d78;
+    padding-top: 5px;
     font-size: 13px;
     font-weight: 800;
-    border-top: 1px solid #111;
-    padding-top: 5px;
-    margin-top: 4px;
 }
 
 .notes {
+    color: #4d4037;
     font-size: 10px;
-    color: #333;
 }
 
 .footer-msg {
@@ -141,28 +142,20 @@ thead td {
 }
 
 .actions button {
-    padding: 10px 18px;
-    font-size: 13px;
-    border-radius: 8px;
     border: none;
-    cursor: pointer;
-    background: #111;
+    border-radius: 8px;
+    background: #a48d78;
     color: #fff;
-}
-
-.actions a {
-    display: inline-block;
-    margin-top: 8px;
-    font-size: 12px;
-    color: #555;
-    text-decoration: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 10px 18px;
 }
 
 @media screen {
     body {
         width: 302px;
-        border: 1px solid #ddd;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        border: 1px solid #e6dac8;
+        box-shadow: 0 4px 14px rgba(77, 64, 55, .12);
         padding: 16px 12px;
     }
 }
@@ -184,10 +177,8 @@ thead td {
 
 <body>
 <div class="receipt">
-
     <div class="center">
-        <img src="{{ asset('images/martinis-logo.png') }}" class="logo" alt="Martinis & Manicures Logo">
-
+        <img src="{{ asset('images/martinis-logo.png') }}" class="logo" alt="Martinis and Manicures Logo">
         <div class="receipt-title">Official Receipt</div>
         <div class="muted">Thank you for choosing us</div>
     </div>
@@ -212,71 +203,56 @@ thead td {
     </div>
 
     @if($invoice->appointment)
-        <hr class="divider">
+    <hr class="divider">
 
-        <div class="section-title">Customer Details</div>
+    <div class="section-title">Customer Details</div>
 
-        <div class="row">
-            <span>Name</span>
-            <span>{{ $invoice->appointment->full_name }}</span>
-        </div>
+    <div class="row">
+        <span>Name</span>
+        <span>{{ $invoice->appointment->full_name }}</span>
+    </div>
 
-        <div class="row">
-            <span>Contact</span>
-            <span>{{ $invoice->appointment->contact_number }}</span>
-        </div>
+    <div class="row">
+        <span>Contact</span>
+        <span>{{ $invoice->appointment->contact_number }}</span>
+    </div>
+
+    @if($invoice->appointment->email)
+    <div class="row">
+        <span>Email</span>
+        <span>{{ $invoice->appointment->email }}</span>
+    </div>
+    @endif
     @endif
 
     <hr class="divider">
 
-    <div class="section-title">Items / Services</div>
+    <div class="section-title">Service</div>
 
-    <table>
-        <thead>
-            <tr>
-                <td class="col-item">Item</td>
-                <td class="col-qty">Qty</td>
-                <td class="col-price">Price</td>
-                <td class="col-sub">Total</td>
-            </tr>
-        </thead>
-
-        <tbody>
-        @foreach($invoice->items as $item)
-            <tr>
-                <td class="col-item">{{ $item->name }}</td>
-                <td class="col-qty">{{ $item->qty }}</td>
-                <td class="col-price">{{ number_format($item->price, 2) }}</td>
-                <td class="col-sub">{{ number_format($item->subtotal, 2) }}</td>
-            </tr>
-        @endforeach
-        </tbody>
-    </table>
+    <div class="row">
+        <span>{{ $invoice->appointment->service->name ?? 'Service' }}</span>
+        <span>PHP {{ number_format($invoice->service_total, 2) }}</span>
+    </div>
 
     <hr class="divider">
 
     <div class="total-box">
         <div class="row">
-            <span>Service Total</span>
-            <span>₱{{ number_format($invoice->service_total, 2) }}</span>
-        </div>
-
-        <div class="row">
-            <span>Items Total</span>
-            <span>₱{{ number_format($invoice->items_total, 2) }}</span>
+            <span>Subtotal</span>
+            <span>PHP {{ number_format($invoice->service_total, 2) }}</span>
         </div>
 
         <div class="row total-row">
             <span>Grand Total</span>
-            <span>₱{{ number_format($invoice->grand_total, 2) }}</span>
+            <span>PHP {{ number_format($invoice->grand_total, 2) }}</span>
         </div>
     </div>
 
     @if($invoice->notes)
-        <hr class="divider">
-        <div class="notes">
-            <strong>Notes:</strong> {{ $invoice->notes }}
-        </div>
+    <hr class="divider">
+    <div class="notes">
+        <strong>Notes:</strong> {{ $invoice->notes }}
+    </div>
     @endif
 
     <hr class="divider">
@@ -285,9 +261,8 @@ thead td {
     <div class="center muted">Please come again</div>
 
     <div class="actions">
-        <button onclick="window.print()">🖨 Print Receipt</button>
+        <button type="button" onclick="window.print()">Print Receipt</button>
     </div>
-
 </div>
 </body>
 </html>

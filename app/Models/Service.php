@@ -11,6 +11,12 @@ class Service extends Model
         'price',
         'duration',
         'description',
-        'is_active'
+        'is_active',
+        'requires_consent',
+    ];
+
+    protected $casts = [
+        'requires_consent' => 'boolean',
+        'is_active' => 'boolean',
     ];
 }

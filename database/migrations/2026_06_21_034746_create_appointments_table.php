@@ -12,6 +12,7 @@ return new class extends Migration {
 
             $table->string('full_name');
             $table->string('contact_number');
+            $table->string('email')->nullable();
 
             // FK SAFE ORDERED
             $table->foreignId('service_id')
@@ -28,6 +29,7 @@ return new class extends Migration {
             $table->text('notes')->nullable();
 
             $table->string('status')->default('pending');
+            $table->string('payment_status')->default('unpaid');
             $table->string('booking_type')->nullable();
 
             $table->timestamps();

@@ -10,32 +10,37 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        // ADMIN
+        $defaultPassword = env('SEED_USER_PASSWORD');
+
+        if (app()->environment('production') && blank($defaultPassword)) {
+            throw new \RuntimeException('Set SEED_USER_PASSWORD before seeding users in production.');
+        }
+
+        $password = Hash::make($defaultPassword ?: 'password123');
+
         User::updateOrCreate(
             ['email' => 'admin@spa.com'],
             [
                 'name' => 'System Admin',
-                'password' => Hash::make('password123'),
+                'password' => $password,
                 'role' => 'admin',
             ]
         );
 
-        // MANAGER
         User::updateOrCreate(
             ['email' => 'manager@spa.com'],
             [
                 'name' => 'Spa Manager',
-                'password' => Hash::make('password123'),
+                'password' => $password,
                 'role' => 'management',
             ]
         );
 
-        // STAFF
         User::updateOrCreate(
             ['email' => 'staff1@spa.com'],
             [
                 'name' => 'Staff Member 1',
-                'password' => Hash::make('password123'),
+                'password' => $password,
                 'role' => 'staff',
             ]
         );
@@ -44,8 +49,17 @@ class AdminUserSeeder extends Seeder
             ['email' => 'staff2@spa.com'],
             [
                 'name' => 'Staff Member 2',
-                'password' => Hash::make('password123'),
+                'password' => $password,
                 'role' => 'staff',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'reception@spa.com'],
+            [
+                'name' => 'Reception Desk',
+                'password' => $password,
+                'role' => 'reception',
             ]
         );
     }

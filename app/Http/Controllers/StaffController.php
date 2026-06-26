@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
+    private const ROLES = ['admin', 'management', 'reception', 'staff', 'customer'];
+
     public function index()
     {
         $users = User::latest()->paginate(10);
@@ -21,7 +24,7 @@ class StaffController extends Controller
             'name' => 'required',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
-            'role' => 'required',
+            'role' => ['required', Rule::in(self::ROLES)],
         ]);
 
         User::create([
@@ -43,7 +46,7 @@ class StaffController extends Controller
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users,email,' . $id,
-            'role' => 'required',
+            'role' => ['required', Rule::in(self::ROLES)],
             'password' => 'nullable|min:6',
         ]);
 

@@ -8,9 +8,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\ServiceController;
-use App\Http\Controllers\CommissionController;
-use App\Http\Controllers\CommissionRuleController;
-use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AppointmentPaymentController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ReportController;
@@ -47,7 +44,7 @@ Route::post('/appointments', [AppointmentController::class, 'store'])
 | APPOINTMENTS VIEW (ADMIN / STAFF / MANAGEMENT)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:admin,staff,management'])->group(function () {
+Route::middleware(['auth', 'role:admin,staff,reception,management'])->group(function () {
 
     Route::get('/appointments', [AppointmentController::class, 'index'])
         ->name('appointments.index');
@@ -61,10 +58,13 @@ Route::middleware(['auth', 'role:admin,staff,management'])->group(function () {
 | APPOINTMENT MANAGEMENT (ADMIN / MANAGEMENT ONLY)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:admin,management'])->group(function () {
+Route::middleware(['auth', 'role:admin,management,reception'])->group(function () {
 
     Route::post('/appointments/{id}/status', [AppointmentController::class, 'updateStatus'])
         ->name('appointments.updateStatus');
+
+    Route::put('/appointments/{id}', [AppointmentController::class, 'update'])
+        ->name('appointments.update');
 });
 
 /*
@@ -73,7 +73,7 @@ Route::middleware(['auth', 'role:admin,management'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::post('/appointments/walk-in', [AppointmentController::class, 'storeWalkIn'])
-    ->middleware(['auth', 'role:admin,management,staff'])
+    ->middleware(['auth', 'role:admin,management,staff,reception'])
     ->name('appointments.walkin.store');
 
 /*
@@ -118,80 +118,11 @@ Route::middleware(['auth', 'role:admin,management'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| COMMISSION SYSTEM
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'role:admin,management'])->group(function () {
-
-    Route::get('/commissions', [CommissionController::class, 'index'])
-        ->name('commissions.index');
-
-    Route::get('/commissions/{staffId}/details', [CommissionController::class, 'details'])
-        ->name('commissions.details');
-
-    Route::post('/commissions/{id}/mark-paid', [CommissionController::class, 'markPaid'])
-        ->name('commissions.markPaid');
-});
-
-/*
-|--------------------------------------------------------------------------
-| COMMISSION RULES
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'role:admin,management'])->group(function () {
-
-    Route::get('/commission-rules', [CommissionRuleController::class, 'index'])
-        ->name('commission-rules.index');
-
-    Route::post('/commission-rules', [CommissionRuleController::class, 'store'])
-        ->name('commission-rules.store');
-
-    Route::post('/commission-rules/{id}/toggle', [CommissionRuleController::class, 'toggle'])
-        ->name('commission-rules.toggle');
-
-    Route::delete('/commission-rules/{id}', [CommissionRuleController::class, 'destroy'])
-        ->name('commission-rules.destroy');
-});
-
-/*
-|--------------------------------------------------------------------------
-| INVENTORY MODULE
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'role:admin,management,staff'])->group(function () {
-
-    Route::get('/inventory', [ProductController::class, 'index'])
-        ->name('inventory.index');
-
-    Route::get('/inventory/search', [ProductController::class, 'search'])
-        ->name('inventory.search');
-
-    Route::get('/inventory/{id}', [ProductController::class, 'show'])
-        ->name('inventory.show');
-});
-
-Route::middleware(['auth', 'role:admin,management'])->group(function () {
-
-    Route::post('/inventory', [ProductController::class, 'store'])
-        ->name('inventory.store');
-
-    Route::post('/inventory/stock-in', [ProductController::class, 'stockIn'])
-        ->name('inventory.stockIn');
-
-    Route::put('/inventory/{id}', [ProductController::class, 'update'])
-        ->name('inventory.update');
-
-    Route::delete('/inventory/{id}', [ProductController::class, 'destroy'])
-        ->name('inventory.destroy');
-});
-
-/*
-|--------------------------------------------------------------------------
 | APPOINTMENT PAYMENTS
 |--------------------------------------------------------------------------
 */
 Route::post('/appointments/{id}/payment', [AppointmentPaymentController::class, 'store'])
-    ->middleware(['auth', 'role:admin,management,staff'])
+    ->middleware(['auth', 'role:admin,management,staff,reception'])
     ->name('appointments.payment.store');
 
 /*
@@ -200,7 +131,7 @@ Route::post('/appointments/{id}/payment', [AppointmentPaymentController::class, 
 |--------------------------------------------------------------------------
 */
 Route::get('/invoices/{id}/receipt', [InvoiceController::class, 'receipt'])
-    ->middleware(['auth', 'role:admin,management,staff'])
+    ->middleware(['auth', 'role:admin,management,staff,reception'])
     ->name('invoices.receipt');
 
 /*
@@ -214,6 +145,9 @@ Route::middleware(['auth', 'role:admin,management'])->group(function () {
     Route::get('/reports', [ReportController::class, 'index'])
         ->name('reports.index');
 
+    Route::get('/reports/customer-services', [ReportController::class, 'customerServices'])
+        ->name('reports.customer-services');
+
     Route::get('/reports/download', [ReportController::class, 'downloadReport'])
         ->name('reports.download');
 });
@@ -225,7 +159,7 @@ Route::middleware(['auth', 'role:admin,management'])->group(function () {
 */
 Route::prefix('gallery')
     ->name('gallery.')
-    ->middleware(['auth', 'role:admin,management'])
+    ->middleware(['auth', 'role:admin,management,reception'])
     ->group(function () {
 
         Route::get('/', [GalleryController::class, 'index'])

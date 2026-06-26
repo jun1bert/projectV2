@@ -9,7 +9,6 @@ class Invoice extends Model
     protected $fillable = [
         'appointment_id',
         'service_total',
-        'items_total',
         'grand_total',
         'payment_method',
         'status',
@@ -18,10 +17,5 @@ class Invoice extends Model
     public function appointment()
     {
         return $this->belongsTo(Appointment::class);
-    }
-
-    public function items()
-    {
-        return $this->hasMany(InvoiceItem::class);
     }
 }

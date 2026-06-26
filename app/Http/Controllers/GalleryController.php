@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class GalleryController extends Controller
 {
-    private array $allowedRoles = ['admin', 'management', 'staff'];
+    private array $allowedRoles = ['admin', 'management', 'reception', 'staff'];
 
     public function index()
     {

@@ -49,28 +49,28 @@ class User extends Authenticatable
     }
 
     public function isAdmin()
-{
-    return $this->role === 'admin';
-}
+    {
+        return $this->role === 'admin';
+    }
 
-public function isManagement()
-{
-    return $this->role === 'management';
-}
+    public function isManagement()
+    {
+        return $this->role === 'management';
+    }
 
-public function isStaff()
-{
-    return $this->role === 'staff';
-}
+    public function isReception()
+    {
+        return $this->role === 'reception';
+    }
 
-public function isCustomer()
-{
-    return $this->role === 'customer';
-}
-public function commissions()
-{
-    return $this->hasMany(\App\Models\StaffCommission::class, 'staff_id');
-}
+    public function isStaff()
+    {
+        return $this->role === 'staff';
+    }
 
+    public function isCustomer()
+    {
+        return $this->role === 'customer';
+    }
 
 }

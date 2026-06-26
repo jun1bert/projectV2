@@ -7,30 +7,45 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
         :root {
-            --gold: #c8a96a;
-            --gold-dark: #b89455;
-            --bg-1: #120d0b;
-            --bg-2: #2b1f1a;
-            --bg-3: #3a2a22;
+            --desert-rock: #A48D78;
+            --soft-sandstone: #CBB9A4;
+            --creamed-oat: #E6DAC8;
+            --porcelain-mist: #F4F1EA;
+            --feather-white: #FAF9F6;
+            --ink: #4d4037;
+            --muted: #817267;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, var(--bg-1), var(--bg-2), var(--bg-3));
-            color: white;
+            font-family: 'Organetto', 'Montserrat', Arial, sans-serif;
+            font-weight: 700;
+            isolation: isolate;
+            background:
+                linear-gradient(135deg, rgba(244,241,234,.98), rgba(230,218,200,.92)),
+                radial-gradient(circle at 12% 8%, rgba(164,141,120,.22), transparent 30%),
+                radial-gradient(circle at 88% 18%, rgba(203,185,164,.30), transparent 34%);
+            color: var(--ink);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background:
+                linear-gradient(120deg, transparent 0 18%, rgba(250,249,246,.62) 18% 34%, transparent 34% 100%),
+                radial-gradient(circle at 50% 0%, rgba(250,249,246,.75), transparent 42%);
         }
 
         h1, h2, h3 {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Black Mango', 'Cinzel', Georgia, serif;
+            font-weight: 700;
+            letter-spacing: .08em;
         }
 
         .luxury-title {
@@ -39,540 +54,668 @@
         }
 
         .glass {
-            background: rgba(255,255,255,0.06);
+            background: rgba(250,249,246,0.84);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.12);
+            border: 1px solid rgba(164,141,120,0.22);
+            box-shadow: 0 18px 48px rgba(77,64,55,.10);
+        }
+
+        .warm-panel {
+            background:
+                linear-gradient(135deg, rgba(250,249,246,.92), rgba(230,218,200,.62)),
+                radial-gradient(circle at 100% 0%, rgba(164,141,120,.14), transparent 34%);
+            border: 1px solid rgba(164,141,120,.22);
+            box-shadow: 0 20px 56px rgba(77,64,55,.10);
+        }
+
+        .section-band {
+            background: rgba(244,241,234,.58);
+            border-block: 1px solid rgba(164,141,120,.12);
+        }
+
+        .hero-media {
+            background-image:
+                linear-gradient(90deg, rgba(44,36,31,.74), rgba(77,64,55,.32) 48%, rgba(244,241,234,.82)),
+                var(--hero-image);
+            background-size: cover;
+            background-position: center 38%;
+        }
+
+        .hero-photo {
+            border: 1px solid rgba(250,249,246,.42);
+            box-shadow: 0 22px 60px rgba(44,36,31,.26);
+            background: var(--creamed-oat);
         }
 
         .btn-gold {
-            background: var(--gold);
-            color: #0b0b0b;
-            font-weight: 500;
+            background: var(--desert-rock);
+            color: var(--feather-white);
+            font-weight: 700;
+            letter-spacing: .06em;
         }
 
         .btn-gold:hover {
-            background: var(--gold-dark);
+            background: #8f7663;
         }
 
         @keyframes fadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(18px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
 
-.animate-fade-up {
-    animation: fadeUp 0.7s ease both;
-}
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(.96) translateY(10px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
 
-html {
-    scroll-behavior: smooth;
-}
+        html { scroll-behavior: smooth; }
 
-.hero-gold {
-    position: relative;
+        .animate-fade-up { animation: fadeUp 0.7s ease both; }
 
-    background: linear-gradient(
-        180deg,
-        #fff8d6 0%,
-        #f7d87b 20%,
-        #c8a96a 50%,
-        #fff2b0 75%,
-        #ffffff 100%
-    );
+        .hero-gold {
+            color: var(--desert-rock);
+            text-shadow: 0 10px 30px rgba(164,141,120,.16);
+        }
 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+        .form-field {
+            background: rgba(250,249,246,.92);
+            border: 1px solid rgba(164,141,120,.28);
+            color: var(--ink);
+        }
 
-    text-shadow:
-        0 0 10px rgba(200,169,106,.4),
-        0 0 20px rgba(200,169,106,.3),
-        0 0 40px rgba(200,169,106,.25);
+        .form-field::placeholder { color: rgba(77,64,55,.48); }
 
-    animation: goldGlow 4s ease-in-out infinite;
-}
+        .form-field:focus {
+            outline: 2px solid rgba(164,141,120,.36);
+            border-color: var(--desert-rock);
+        }
 
-@keyframes goldGlow {
-    0%,100%{
-        filter: brightness(1);
-    }
-    50%{
-        filter: brightness(1.25);
-    }
-}
+        /* Field-level validation states */
+        .form-field.field-error {
+            border-color: #e05252;
+            outline: 2px solid rgba(224,82,82,.22);
+        }
 
-.hero-gold::after {
-    content: "";
+        .field-hint {
+            font-size: .72rem;
+            font-weight: 600;
+            margin-top: 4px;
+            padding-left: 2px;
+        }
 
-    position: absolute;
-    inset: 0;
+        .field-hint.error  { color: #c0392b; }
+        .field-hint.ok     { color: #5a7a5a; }
 
-    background: linear-gradient(
-        110deg,
-        transparent 30%,
-        rgba(255,255,255,.9) 50%,
-        transparent 70%
-    );
+        .gallery-card { cursor: zoom-in; }
 
-    background-size: 200% 100%;
+        .modal-panel { animation: modalIn .22s ease both; }
 
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+        .site-logo {
+            height: clamp(2.6rem, 8vw, 4rem);
+            width: auto;
+            max-width: min(12rem, 52vw);
+            object-fit: contain;
+        }
 
-    animation: shimmer 6s linear infinite;
-}
+        .mini-stat {
+            background: rgba(77,64,55,.64);
+            border: 1px solid rgba(250,249,246,.22);
+            color: var(--porcelain-mist);
+            box-shadow: 0 14px 34px rgba(44,36,31,.22);
+        }
 
-@keyframes shimmer {
-    from {
-        background-position: -200% 0;
-    }
-    to {
-        background-position: 200% 0;
-    }
-}
+        .establishment-thumb {
+            background: var(--creamed-oat);
+            border: 1px solid rgba(164,141,120,.22);
+            box-shadow: 0 16px 42px rgba(77,64,55,.10);
+        }
 
-.title-glitters {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}
+        .map-frame {
+            filter: saturate(.82) sepia(.08);
+        }
 
-.title-glitters span {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background: #fff8cf;
-    border-radius: 50%;
-    box-shadow:
-        0 0 5px #fff,
-        0 0 10px var(--gold),
-        0 0 18px var(--gold);
-    animation: starTwinkle 2.8s ease-in-out infinite;
-}
-
-.title-glitters span::before,
-.title-glitters span::after {
-    content: "";
-    position: absolute;
-    background: #fff8cf;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.title-glitters span::before {
-    width: 1px;
-    height: 10px;
-}
-
-.title-glitters span::after {
-    width: 10px;
-    height: 1px;
-}
-
-.title-glitters span:nth-child(1){ top: 18%; left: 20%; }
-.title-glitters span:nth-child(2){ top: 35%; left: 44%; animation-delay: .6s; }
-.title-glitters span:nth-child(3){ top: 20%; left: 70%; animation-delay: 1.1s; }
-.title-glitters span:nth-child(4){ top: 68%; left: 34%; animation-delay: 1.6s; }
-.title-glitters span:nth-child(5){ top: 60%; left: 82%; animation-delay: 2.1s; }
-
-@keyframes starTwinkle {
-    0%, 100% {
-        opacity: 0;
-        transform: scale(.4) rotate(0deg);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1) rotate(45deg);
-    }
-}
-
-.bg-aurora {
-    position: fixed;
-    inset: -20%;
-    z-index: -3;
-    pointer-events: none;
-    background:
-        radial-gradient(circle at 20% 30%, rgba(200,169,106,.16), transparent 26%),
-        radial-gradient(circle at 80% 20%, rgba(255,226,150,.10), transparent 24%),
-        radial-gradient(circle at 50% 80%, rgba(200,169,106,.12), transparent 30%);
-    filter: blur(8px);
-    animation: auroraMove 18s ease-in-out infinite alternate;
-}
-
-@keyframes auroraMove {
-    from {
-        transform: translate3d(-2%, -1%, 0) scale(1);
-    }
-    to {
-        transform: translate3d(2%, 3%, 0) scale(1.08);
-    }
-}
-
-.bg-dust {
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    pointer-events: none;
-    overflow: hidden;
-}
-
-.bg-dust span {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    background: rgba(255, 220, 140, .85);
-    border-radius: 999px;
-    box-shadow: 0 0 12px rgba(200,169,106,.9);
-    animation: dustFloat 9s ease-in-out infinite;
-}
-
-.bg-dust span:nth-child(11) { top: 8%; left: 25%; animation-delay: 1.2s; }
-.bg-dust span:nth-child(12) { top: 12%; left: 55%; animation-delay: 2.5s; }
-.bg-dust span:nth-child(13) { top: 20%; left: 75%; animation-delay: 3.8s; }
-.bg-dust span:nth-child(14) { top: 25%; left: 5%; animation-delay: 4.2s; }
-.bg-dust span:nth-child(15) { top: 32%; left: 40%; animation-delay: 5.3s; }
-.bg-dust span:nth-child(16) { top: 38%; left: 62%; animation-delay: 1.7s; }
-.bg-dust span:nth-child(17) { top: 42%; left: 15%; animation-delay: 6.1s; }
-.bg-dust span:nth-child(18) { top: 50%; left: 78%; animation-delay: 7.5s; }
-.bg-dust span:nth-child(19) { top: 55%; left: 48%; animation-delay: 2.8s; }
-.bg-dust span:nth-child(20) { top: 60%; left: 25%; animation-delay: 8.2s; }
-
-.bg-dust span:nth-child(21) { top: 66%; left: 85%; animation-delay: 3.3s; }
-.bg-dust span:nth-child(22) { top: 72%; left: 55%; animation-delay: 6.8s; }
-.bg-dust span:nth-child(23) { top: 78%; left: 22%; animation-delay: 4.7s; }
-.bg-dust span:nth-child(24) { top: 82%; left: 72%; animation-delay: 2.1s; }
-.bg-dust span:nth-child(25) { top: 90%; left: 35%; animation-delay: 7.9s; }
-
-.bg-dust span:nth-child(26) { top: 5%; left: 92%; animation-delay: 5.1s; }
-.bg-dust span:nth-child(27) { top: 18%; left: 35%; animation-delay: 1.9s; }
-.bg-dust span:nth-child(28) { top: 30%; left: 88%; animation-delay: 4.9s; }
-.bg-dust span:nth-child(29) { top: 45%; left: 52%; animation-delay: 8.4s; }
-.bg-dust span:nth-child(30) { top: 68%; left: 8%; animation-delay: 3.6s; }
-
-@keyframes dustFloat {
-    0%, 100% {
-        opacity: .15;
-        transform: translateY(0) scale(.7);
-    }
-    50% {
-        opacity: .9;
-        transform: translateY(-28px) scale(1.15);
-    }
-}
-
-.bg-dust span:nth-child(3n) {
-    width: 2px;
-    height: 2px;
-}
-
-.bg-dust span:nth-child(4n) {
-    width: 4px;
-    height: 4px;
-}
-
-.bg-dust span:nth-child(5n) {
-    width: 5px;
-    height: 5px;
-}
+        @media (max-width: 640px) {
+            h1, h2, h3 { letter-spacing: .045em; }
+            .site-logo { max-width: 9rem; }
+        }
     </style>
 </head>
 
 <body id="top" class="relative overflow-x-hidden">
-<div class="bg-aurora"></div>
-<div class="bg-dust">
-    <span></span><span></span><span></span><span></span><span></span>
-    <span></span><span></span><span></span><span></span><span></span>
 
-    <span></span><span></span><span></span><span></span><span></span>
-    <span></span><span></span><span></span><span></span><span></span>
+{{-- Header --}}
+<header class="fixed w-full top-0 z-50 bg-[var(--porcelain-mist)]/88 backdrop-blur-xl border-b border-[var(--desert-rock)]/20 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-10 py-3">
+        <a href="#top" class="flex min-w-0 items-center justify-center sm:justify-start" aria-label="Martinis and Manicures home">
+            <img src="{{ asset('images/martinis-logo-white.png') }}"
+                 alt="Martinis and Manicures"
+                 class="site-logo">
+        </a>
 
-    <span></span><span></span><span></span><span></span><span></span>
-    <span></span><span></span><span></span><span></span><span></span>
-</div>
-<!-- NAV -->
-<header class="fixed w-full top-0 z-50 bg-[#120d0b]/70 backdrop-blur-xl border-b border-white/10">
-    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-10 py-4">
-
-        <h1 class="text-base sm:text-xl font-bold text-[var(--gold)] whitespace-nowrap">
-            <a href="#top">Martinis & Manicures</a>
-        </h1>
-
-        <nav class="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm">
-            <a href="#services" class="text-white/70 hover:text-[var(--gold)] transition">Services</a>
-            <a href="#gallery" class="text-white/70 hover:text-[var(--gold)] transition">Gallery</a>
-            <a href="#book" class="bg-[var(--gold)] hover:bg-[var(--gold-dark)] text-black px-3 sm:px-5 py-2 rounded-full transition whitespace-nowrap">
-                Book Now
+        <nav class="flex items-center justify-end gap-3 sm:gap-6 text-[11px] sm:text-sm">
+            <a href="#services" class="hidden text-[var(--feather-white)] hover:text-[var(--creamed-oat)] transition whitespace-nowrap sm:inline">Services</a>
+            <a href="#gallery"  class="hidden text-[var(--feather-white)] hover:text-[var(--creamed-oat)] transition whitespace-nowrap sm:inline">Gallery</a>
+            <a href="#location" class="hidden text-[var(--feather-white)] hover:text-[var(--creamed-oat)] transition whitespace-nowrap sm:inline">Location</a>
+            <a href="#book"
+               class="bg-[var(--desert-rock)] hover:bg-[#8f7663] text-[var(--feather-white)]
+                      px-3.5 sm:px-5 py-2 rounded-full transition whitespace-nowrap font-bold shrink-0">
+                Book
             </a>
         </nav>
-
     </div>
 </header>
 
-<section class="relative pt-32 sm:pt-40 pb-20 text-center px-4 overflow-hidden">
-    <p class="text-[10px] sm:text-xs tracking-[0.25em] uppercase text-white/50">
-        A refined escape for beauty and self-care.<br>
-From flawless nails to rejuvenating treatments,<br>
-we pamper you from head to toe.
-    </p>
-
-    <div class="relative inline-block mt-6">
-        <h1 class="luxury-title hero-gold font-semibold">
-            Beauty is a Ritual,<br>
-            Not a Routine
-        </h1>
-
-        <div class="title-glitters">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-        </div>
-    </div>
-</section>
-
-<!-- EXPERIENCE -->
-<section class="px-4">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-        <div class="glass p-6 rounded-2xl">
-            <p class="text-xs text-white/50">Relaxation</p>
-            <h3 class="text-lg mt-2">Therapeutic Massage</h3>
-        </div>
-
-        <div class="glass p-6 rounded-2xl">
-            <p class="text-xs text-white/50">Beauty</p>
-            <h3 class="text-lg mt-2">Nail Studio</h3>
-        </div>
-
-        <div class="glass p-6 rounded-2xl">
-            <p class="text-xs text-white/50">Glow</p>
-            <h3 class="text-lg mt-2">Facial Care</h3>
-        </div>
-
-        <div class="glass p-6 rounded-2xl">
-            <p class="text-xs text-white/50">Wellness</p>
-            <h3 class="text-lg mt-2">Body Rituals</h3>
-        </div>
-
-    </div>
-</section>
-
-<!-- SERVICES -->
-<section id="services" class="px-4 py-20">
-
-    <div class="text-center mb-10">
-        <h2 class="text-3xl font-light">Signature Services</h2>
-        <p class="text-white/60 mt-3 text-sm">Crafted for relaxation and beauty</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        @forelse($services as $service)
-            <div class="glass p-6 rounded-3xl">
-                <h3 class="text-xl">{{ $service->name }}</h3>
-
-                <div class="flex items-center gap-2 mt-2 text-sm">
-                    <span class="text-[var(--gold)] font-semibold">
-                        ₱{{ number_format($service->price, 2) }}
-                    </span>
-
-                    <span class="text-white/30">•</span>
-
-                    <span class="text-white/50">
-                        {{ $service->duration }} mins
-                    </span>
+{{-- Hero --}}
+@php
+    $heroImage = asset('images/1.png');
+@endphp
+<section class="hero-media relative min-h-[92vh] px-4 pt-28 sm:pt-32"
+         style="--hero-image: url('{{ $heroImage }}');">
+    <div class="mx-auto grid min-h-[calc(92vh-7rem)] max-w-7xl items-center gap-10 lg:grid-cols-[1fr_420px]">
+        <div class="max-w-2xl py-16 text-[var(--feather-white)] sm:py-24">
+            <p class="text-[10px] sm:text-xs tracking-[0.28em] uppercase text-[var(--porcelain-mist)]">
+                Martinis and Manicures
+            </p>
+            <h1 class="luxury-title mt-5 font-semibold text-[var(--feather-white)]">
+                Beauty is a Ritual,<br>
+                Not a Routine
+            </h1>
+            <p class="mt-6 max-w-xl text-sm leading-7 text-[var(--porcelain-mist)] sm:text-base">
+                A calm beauty space for nails, body care, and restorative treatments. Reserve your visit online and let the team prepare your service.
+            </p>
+            <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+                <a href="#book" class="btn-gold inline-flex justify-center rounded-full px-7 py-3 text-sm transition active:scale-[.98]">
+                    Book Appointment
+                </a>
+                <a href="#gallery" class="inline-flex justify-center rounded-full border border-[var(--feather-white)]/50 bg-[var(--feather-white)]/12 px-7 py-3 text-sm text-[var(--feather-white)] backdrop-blur transition hover:bg-[var(--feather-white)]/20">
+                    View Gallery
+                </a>
+            </div>
+            <div class="mt-10 grid max-w-xl grid-cols-3 gap-3 text-center text-xs text-[var(--porcelain-mist)]">
+                <div class="mini-stat rounded-2xl px-3 py-4 backdrop-blur">
+                    <strong class="block text-lg text-[var(--feather-white)]">{{ $services->count() }}</strong>
+                    Services
                 </div>
+                <div class="mini-stat rounded-2xl px-3 py-4 backdrop-blur">
+                    <strong class="block text-lg text-[var(--feather-white)]">10</strong>
+                    Daily slots
+                </div>
+                <div class="mini-stat rounded-2xl px-3 py-4 backdrop-blur">
+                    <strong class="block text-lg text-[var(--feather-white)]">Online/ Walk-In</strong>
+                    Booking
+                </div>
+            </div>
+        </div>
 
+        <div class="relative hidden min-h-[560px] lg:block">
+            <img src="{{ asset('images/2.png') }}" alt="Martinis and Manicures establishment interior"
+                 class="hero-photo absolute right-0 top-4 h-[420px] w-72 rounded-2xl object-cover">
+            <img src="{{ asset('images/3.jpg') }}" alt="Martinis and Manicures service area"
+                 class="hero-photo absolute left-0 top-36 h-80 w-56 rounded-2xl object-cover">
+            <img src="{{ asset('images/4.jpg') }}" alt="Martinis and Manicures detail"
+                 class="hero-photo absolute bottom-0 right-16 h-56 w-48 rounded-2xl object-cover">
+        </div>
+    </div>
+</section>
+
+{{-- Establishment preview --}}
+<section class="px-4 py-12">
+    <div class="mx-auto grid max-w-7xl gap-4 sm:grid-cols-3">
+        @foreach([
+            ['src' => asset('images/5.jpg'), 'alt' => 'Martinis and Manicures establishment photo'],
+            ['src' => asset('images/6.jpg'), 'alt' => 'Martinis and Manicures interior photo'],
+            ['src' => asset('images/7.jpg'), 'alt' => 'Martinis and Manicures service area photo'],
+        ] as $photo)
+            <img src="{{ $photo['src'] }}"
+                 alt="{{ $photo['alt'] }}"
+                 loading="lazy"
+                 class="establishment-thumb h-64 w-full rounded-2xl object-cover sm:h-72 lg:h-80">
+        @endforeach
+    </div>
+</section>
+
+{{-- Services --}}
+<section id="services" class="section-band px-4 py-20">
+    <div class="text-center mb-12">
+        <h2 class="text-3xl font-light">Signature Services</h2>
+        <p class="text-[var(--muted)] mt-3 text-sm">Clear choices, calm pacing, no guesswork.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        @forelse($services as $service)
+            <div class="warm-panel flex min-h-[210px] flex-col rounded-2xl p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <h3 class="text-xl">{{ $service->name }}</h3>
+                    @if($service->requires_consent)
+                    <span class="shrink-0 rounded-full bg-[rgba(164,141,120,.14)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--desert-rock)]">
+                        Consent
+                    </span>
+                    @endif
+                </div>
+                <div class="flex items-center gap-2 mt-2 text-sm">
+                    <span class="text-[var(--desert-rock)] font-semibold">
+                        &#8369;{{ number_format($service->price, 2) }}
+                    </span>
+                    <span class="text-[var(--soft-sandstone)]">&bull;</span>
+                    <span class="text-[var(--muted)]">{{ $service->duration }} mins</span>
+                </div>
                 @if($service->description)
-                    <p class="text-white/60 mt-3 text-sm">
+                    <p class="text-[var(--muted)] mt-3 text-sm leading-relaxed">
                         {{ $service->description }}
                     </p>
                 @endif
+                <a href="#book" class="mt-auto pt-5 text-sm font-bold text-[var(--desert-rock)] hover:text-[#8f7663]">
+                    Book this service
+                </a>
             </div>
         @empty
-            <div class="col-span-full text-center text-white/40 text-sm">
+            <div class="col-span-full text-center text-[var(--muted)] text-sm py-10">
                 No services available yet.
             </div>
         @endforelse
     </div>
 </section>
 
-<!-- GALLERY -->
+{{-- Gallery --}}
 <section id="gallery" class="px-4 py-20">
-
     <div class="text-center mb-12">
         <h2 class="text-3xl font-light">Our Space</h2>
-        <p class="text-white/60 mt-3 text-sm">A sanctuary of calm and beauty</p>
+        <p class="text-[var(--muted)] mt-3 text-sm">A sanctuary of calm and beauty</p>
     </div>
 
     @if($galleryImages->isEmpty())
-        <div class="text-center py-10 text-white/40 text-sm">
-            No gallery images yet.
-        </div>
+        <div class="text-center py-10 text-[var(--muted)] text-sm">No gallery images yet.</div>
     @else
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-7xl mx-auto">
-
             @foreach($galleryImages as $image)
-                <div class="
-                    relative overflow-hidden rounded-3xl bg-white/5 group animate-fade-up
-                    {{ $loop->first ? 'lg:col-span-2 lg:row-span-2' : '' }}
-                ">
+                <button type="button"
+                    class="gallery-card relative overflow-hidden rounded-2xl bg-[var(--creamed-oat)] group animate-fade-up w-full text-left shadow-xl shadow-[#4d4037]/10
+                           {{ $loop->first ? 'lg:col-span-2 lg:row-span-2' : '' }}"
+                    onclick="openGalleryModal(this)"
+                    data-gallery-src="{{ asset('storage/' . $image->path) }}"
+                    data-gallery-title="{{ $image->title ?? 'Gallery image' }}"
+                    data-gallery-caption="{{ $image->caption ?? '' }}">
 
-                    {{-- Placeholder / loading skeleton --}}
-                    <div class="absolute inset-0 bg-white/10 animate-pulse"></div>
+                    <div class="absolute inset-0 bg-[var(--soft-sandstone)]/35 animate-pulse"></div>
 
                     <img src="{{ asset('storage/' . $image->path) }}"
                          alt="{{ $image->title ?? 'Gallery image' }}"
                          loading="lazy"
                          onload="this.previousElementSibling.style.display='none'; this.classList.remove('opacity-0')"
                          onerror="this.onerror=null; this.src='{{ asset('images/placeholder-gallery.jpg') }}'; this.previousElementSibling.style.display='none'; this.classList.remove('opacity-0')"
-                         class="
-                            relative z-10 w-full object-cover opacity-0
-                            transition-all duration-700 ease-out
-                            group-hover:scale-105 group-hover:brightness-75
-                            {{ $loop->first ? 'h-[650px]' : 'h-[310px]' }}
-                         ">
+                         class="relative z-10 w-full object-cover opacity-0
+                                transition-all duration-700 ease-out
+                                group-hover:scale-105 group-hover:brightness-90
+                                {{ $loop->first ? 'h-[420px] sm:h-[520px] lg:h-[650px]' : 'h-[260px] sm:h-[310px]' }}">
 
-                    <div class="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                    <div class="absolute inset-0 z-10 bg-gradient-to-t from-[#4d4037]/75 via-[#4d4037]/8 to-transparent
+                                opacity-0 group-hover:opacity-100 transition duration-300"></div>
 
                     @if($image->caption || $image->title)
-                        <div class="absolute bottom-0 left-0 right-0 z-20 p-6 translate-y-6 opacity-0
+                        <div class="absolute bottom-0 left-0 right-0 z-20 p-6
+                                    translate-y-6 opacity-0
                                     group-hover:translate-y-0 group-hover:opacity-100
                                     transition-all duration-300">
-
                             @if($image->title)
-                                <h3 class="text-white text-xl font-medium">
-                                    {{ $image->title }}
-                                </h3>
+                                <h3 class="text-[var(--feather-white)] text-xl font-medium">{{ $image->title }}</h3>
                             @endif
-
                             @if($image->caption)
-                                <p class="text-white/75 text-sm mt-2">
-                                    {{ $image->caption }}
-                                </p>
+                                <p class="text-[var(--porcelain-mist)] text-sm mt-2">{{ $image->caption }}</p>
                             @endif
-
                         </div>
                     @endif
-
-                </div>
+                </button>
             @endforeach
-
         </div>
     @endif
-
 </section>
 
-<!-- BOOKING -->
-<section id="book" class="px-4 py-20">
+{{-- Contact & Location --}}
+<section id="location" class="px-4 py-20">
+    <div class="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-stretch">
 
-    <div class="max-w-3xl mx-auto glass rounded-2xl p-6 sm:p-10">
+        {{-- Contact Information --}}
+        <div class="warm-panel rounded-2xl p-6 sm:p-8">
+            <p class="text-xs font-bold uppercase tracking-[.22em] text-[var(--desert-rock)]">
+                Visit Us
+            </p>
 
-        <h2 class="text-3xl text-center mb-8">Reserve Your Experience</h2>
+            <h2 class="mt-4 text-3xl">
+                Contact & Location
+            </h2>
 
+            <p class="mt-4 text-sm leading-7 text-[var(--muted)]">
+                Visit Martinis & Manicures on the
+                <strong>2nd Floor of Alvarez Building</strong>,
+                directly above <strong>FICOBank</strong> in
+                Solano, Nueva Vizcaya.
+            </p>
+
+            <div class="mt-6 space-y-4">
+
+                <div class="rounded-2xl bg-[var(--feather-white)]/70 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">
+                        Contact Number
+                    </p>
+
+                    <a href="tel:+639190943803"
+                       class="mt-1 block text-xl font-bold text-[var(--ink)] hover:text-[var(--desert-rock)]">
+                        0919 094 3803
+                    </a>
+                </div>
+
+                <div class="rounded-2xl bg-[var(--feather-white)]/70 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">
+                        Address
+                    </p>
+
+                    <p class="mt-2 text-sm leading-6 text-[var(--ink)]">
+                        2nd Floor, Alvarez Building<br>
+                        Above FICOBank<br>
+                        Corner Burgos & Luna Street<br>
+                        Brgy. Quirino, Solano, Nueva Vizcaya 3709
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="mt-6 grid gap-3 sm:grid-cols-2">
+
+                <a href="tel:+639190943803"
+                   class="btn-gold rounded-xl px-4 py-3 text-center">
+                    Call Now
+                </a>
+
+                <a href="https://www.google.com/maps/dir/?api=1&destination=16.514140308362894,121.18155211569338&travelmode=driving"
+                   target="_blank"
+                   rel="noopener"
+                   class="rounded-xl border border-[var(--desert-rock)]/35 bg-[var(--feather-white)]/70 px-4 py-3 text-center font-semibold text-[var(--ink)] transition hover:bg-[var(--creamed-oat)]">
+                    Get Directions
+                </a>
+
+            </div>
+        </div>
+
+        {{-- Storefront Photo --}}
+        <div class="warm-panel overflow-hidden rounded-2xl p-3">
+
+            <img
+                src="{{ asset('images/location3.jpg') }}"
+                alt="Martinis & Manicures storefront"
+                class="h-[360px] w-full rounded-xl object-cover sm:h-[440px] lg:h-full">
+
+            <div class="mt-4 rounded-xl bg-[var(--creamed-oat)] p-4">
+
+                <h3 class="font-semibold text-[var(--ink)]">
+                    Landmark
+                </h3>
+
+                <p class="mt-2 text-sm leading-6 text-[var(--muted)]">
+                    We are located on the
+                    <strong>2nd Floor of Alvarez Building</strong>,
+                    directly above
+                    <strong>FICOBank</strong>.
+                    Look for the FICOBank branch along Burgos Street and head upstairs to reach Martinis & Manicures.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+{{-- Booking --}}
+<section id="book" class="section-band px-4 py-20 pb-28">
+    <div class="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+        <aside class="warm-panel rounded-2xl p-6 sm:p-8">
+            <p class="text-xs font-bold uppercase tracking-[.22em] text-[var(--desert-rock)]">Reservations</p>
+            <h2 class="mt-4 text-3xl">Reserve Your Experience</h2>
+            <p class="mt-4 text-sm leading-7 text-[var(--muted)]">
+                We accept up to <strong>10 confirmed bookings</strong> per day so each client gets proper time and attention.
+            </p>
+            <div class="mt-6 space-y-3 text-sm text-[var(--muted)]">
+                <p class="rounded-xl bg-[var(--feather-white)]/60 p-4">Choose your service and preferred schedule.</p>
+                <p class="rounded-xl bg-[var(--feather-white)]/60 p-4">Some services may ask for a client signature before booking.</p>
+                <p class="rounded-xl bg-[var(--feather-white)]/60 p-4">Your contact details are used only for appointment coordination and service records.</p>
+            </div>
+        </aside>
+
+        <div class="glass rounded-2xl p-6 sm:p-8">
+
+        <h2 class="text-2xl text-center mb-2">Appointment Request</h2>
+        <p class="text-center text-[var(--muted)] text-sm mb-8">Fill out the details below and confirm before sending.</p>
+
+        {{-- Flash messages --}}
         @if(session('success'))
-            <div class="mb-4 p-4 rounded-xl bg-green-500/20 text-green-300">
+            <div class="mb-5 p-4 rounded-xl bg-green-500/20 text-green-700 text-sm">
                 {{ session('success') }}
             </div>
         @endif
 
         @if ($errors->any())
-            <div class="mb-4 p-4 rounded-xl bg-red-500/20 text-red-300">
-                <ul class="text-sm space-y-1">
+            <div class="mb-5 p-4 rounded-xl bg-red-500/20 text-red-700 text-sm">
+                <ul class="space-y-1">
                     @foreach ($errors->all() as $error)
-                        <li>• {{ $error }}</li>
+                        <li>&bull; {{ $error }}</li>
                     @endforeach
                 </ul>
             </div>
         @endif
 
-        <form id="bookingForm" method="POST" action="{{ route('appointments.store') }}" class="space-y-5">
+        <form id="bookingForm" method="POST" action="{{ route('appointments.store') }}" class="space-y-5" novalidate>
             @csrf
 
-            <input type="text" name="full_name" placeholder="Full Name"
-                class="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white">
+            <div class="grid gap-4 sm:grid-cols-2">
+                {{-- Full name --}}
+                <div>
+                    <input type="text" id="field_name" name="full_name"
+                           placeholder="Full Name"
+                           value="{{ old('full_name') }}"
+                           class="form-field w-full p-4 rounded-xl"
+                           autocomplete="name">
+                    <p id="hint_name" class="field-hint hidden"></p>
+                </div>
 
-            <input type="text" name="contact_number" placeholder="Contact Number"
-                class="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white">
-
-            <!-- FIXED -->
-            <select name="service_id"
-                class="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white">
-
-                <option value="">Select Service</option>
-
-                @foreach($services as $service)
-                    <option value="{{ $service->id }}">
-                        {{ $service->name }}
-                    </option>
-                @endforeach
-
-            </select>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input type="date" name="date"
-                    class="p-4 bg-white/5 border border-white/10 rounded-xl text-white">
-
-                <select name="time"
-                    class="p-4 bg-white/5 border border-white/10 text-white rounded-xl">
-
-                    <option value="">Select Time</option>
-                    <option value="08:00">8:00 AM</option>
-                    <option value="09:00">9:00 AM</option>
-                    <option value="10:00">10:00 AM</option>
-                    <option value="11:00">11:00 AM</option>
-                    <option value="12:00">12:00 PM</option>
-                    <option value="13:00">1:00 PM</option>
-                    <option value="14:00">2:00 PM</option>
-                    <option value="15:00">3:00 PM</option>
-                    <option value="16:00">4:00 PM</option>
-                    <option value="17:00">5:00 PM</option>
-
-                </select>
+                {{-- Contact --}}
+                <div>
+                    <input type="text" id="field_contact" name="contact_number"
+                           placeholder="Contact Number (e.g. 09171234567)"
+                           value="{{ old('contact_number') }}"
+                           class="form-field w-full p-4 rounded-xl"
+                           inputmode="tel" autocomplete="tel">
+                    <p id="hint_contact" class="field-hint hidden"></p>
+                </div>
             </div>
 
-            <textarea name="notes" placeholder="Special Requests"
-                class="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white"></textarea>
+            {{-- Email --}}
+            <div>
+                <input type="email" id="field_email" name="email"
+                       placeholder="Email Address (optional)"
+                       value="{{ old('email') }}"
+                       class="form-field w-full p-4 rounded-xl"
+                       autocomplete="email">
+                <p id="hint_email" class="field-hint hidden"></p>
+            </div>
+
+            {{-- Service --}}
+            <div>
+                <select id="field_service" name="service_id" class="form-field w-full p-4 rounded-xl">
+                    <option value="">Select Service</option>
+                    @foreach($services as $service)
+                        <option value="{{ $service->id }}"
+                                data-requires-consent="{{ $service->requires_consent ? '1' : '0' }}"
+                                {{ old('service_id') == $service->id ? 'selected' : '' }}>
+                            {{ $service->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <p id="hint_service" class="field-hint hidden"></p>
+            </div>
+
+            {{-- Date & Time --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <input type="date" id="field_date" name="date"
+                           value="{{ old('date') }}"
+                           min="{{ now()->toDateString() }}"
+                           class="form-field w-full p-4 rounded-xl">
+                    <p id="hint_date" class="field-hint hidden"></p>
+                </div>
+
+                <div>
+                    <select id="field_time" name="time" class="form-field w-full p-4 rounded-xl">
+                        <option value="">Select Time</option>
+                        <option value="08:00" {{ old('time') == '08:00' ? 'selected' : '' }}>8:00 AM</option>
+                        <option value="09:00" {{ old('time') == '09:00' ? 'selected' : '' }}>9:00 AM</option>
+                        <option value="10:00" {{ old('time') == '10:00' ? 'selected' : '' }}>10:00 AM</option>
+                        <option value="11:00" {{ old('time') == '11:00' ? 'selected' : '' }}>11:00 AM</option>
+                        <option value="12:00" {{ old('time') == '12:00' ? 'selected' : '' }}>12:00 PM</option>
+                        <option value="13:00" {{ old('time') == '13:00' ? 'selected' : '' }}>1:00 PM</option>
+                        <option value="14:00" {{ old('time') == '14:00' ? 'selected' : '' }}>2:00 PM</option>
+                        <option value="15:00" {{ old('time') == '15:00' ? 'selected' : '' }}>3:00 PM</option>
+                        <option value="16:00" {{ old('time') == '16:00' ? 'selected' : '' }}>4:00 PM</option>
+                        <option value="17:00" {{ old('time') == '17:00' ? 'selected' : '' }}>5:00 PM</option>
+                    </select>
+                    <p id="hint_time" class="field-hint hidden"></p>
+                </div>
+            </div>
+
+            {{-- Notes --}}
+            <div>
+                <textarea id="field_notes" name="notes"
+                          placeholder="Special Requests (optional)"
+                          rows="3"
+                          class="form-field w-full p-4 rounded-xl resize-none">{{ old('notes') }}</textarea>
+            </div>
+
+            <div id="consentSection" class="hidden rounded-2xl border border-[var(--soft-sandstone)] bg-[var(--feather-white)]/70 p-4">
+                <h3 class="text-lg font-semibold text-[var(--ink)]">Client Consent</h3>
+                <p class="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+                    I voluntarily request this service. I understand the nature of the service, have disclosed relevant health concerns, and consent to receive this service from Martinis and Manicures.
+                </p>
+                <div class="mt-4 rounded-xl border border-[var(--soft-sandstone)] bg-white p-2">
+                    <canvas id="signatureCanvas" class="h-40 w-full touch-none rounded-lg bg-white"></canvas>
+                </div>
+                <input type="hidden" id="consent_signature" name="consent_signature">
+                <div class="mt-3 flex items-center justify-between gap-3">
+                    <p id="hint_consent" class="field-hint hidden"></p>
+                    <button type="button" onclick="clearSignature()" class="text-sm font-semibold text-[var(--desert-rock)]">Clear signature</button>
+                </div>
+            </div>
 
             <button type="button" onclick="openConfirmModal()"
-                class="w-full btn-gold py-3 rounded-xl">
+                    class="w-full btn-gold py-3.5 rounded-xl tracking-wide transition-all duration-200 active:scale-[.98]">
                 Submit Appointment Request
             </button>
         </form>
+        </div>
     </div>
 </section>
 
-<!-- MODAL -->
-<div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-
-    <div class="glass rounded-2xl w-[90%] max-w-lg p-6">
-
-        <h2 class="text-2xl mb-4">Confirm Appointment</h2>
-
-        <div class="space-y-2 text-sm text-white/70">
-            <p><strong>Name:</strong> <span id="previewName"></span></p>
-            <p><strong>Contact:</strong> <span id="previewContact"></span></p>
-            <p><strong>Service:</strong> <span id="previewService"></span></p>
-            <p><strong>Date:</strong> <span id="previewDate"></span></p>
-            <p><strong>Time:</strong> <span id="previewTime"></span></p>
-            <p><strong>Notes:</strong> <span id="previewNotes"></span></p>
+{{-- Gallery modal --}}
+<div id="galleryModal"
+     class="hidden fixed inset-0 z-[60] items-center justify-center bg-[#2c241f]/85 p-4 backdrop-blur-sm">
+    <div class="modal-panel relative w-full max-w-5xl">
+        <button type="button" onclick="closeGalleryModal()"
+                class="absolute -top-12 right-0 rounded-full bg-[var(--feather-white)]
+                       px-4 py-2 text-sm font-bold text-[var(--ink)] shadow-lg hover:bg-[var(--creamed-oat)] transition">
+            ✕ Close
+        </button>
+        <img id="galleryModalImage" src="" alt=""
+             class="max-h-[78vh] w-full rounded-2xl object-contain bg-[var(--feather-white)] shadow-2xl">
+        <div id="galleryModalText" class="mt-3 hidden rounded-2xl bg-[var(--feather-white)]/90 p-4 text-[var(--ink)]">
+            <h3 id="galleryModalTitle"   class="text-lg font-semibold"></h3>
+            <p  id="galleryModalCaption" class="mt-1 text-sm text-[var(--muted)]"></p>
         </div>
-
-        <div class="flex justify-end gap-3 mt-6">
-            <button onclick="closeConfirmModal()" class="px-4 py-2 border rounded-lg">Cancel</button>
-            <button onclick="confirmSubmit()" class="btn-gold px-4 py-2 rounded-lg">Confirm</button>
-        </div>
-
     </div>
 </div>
 
-<!-- SCRIPT FIXED -->
+{{-- Confirm modal --}}
+<div id="confirmModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-[#2c241f]/60 p-4">
+    <div class="modal-panel glass rounded-2xl w-[90%] max-w-lg p-6 sm:p-8">
+        <h2 class="text-2xl mb-5">Confirm Appointment</h2>
+        <div class="space-y-2.5 text-sm text-[var(--muted)]">
+            <p><strong class="text-[var(--ink)]">Name:</strong>    <span id="previewName"></span></p>
+            <p><strong class="text-[var(--ink)]">Contact:</strong> <span id="previewContact"></span></p>
+            <p><strong class="text-[var(--ink)]">Email:</strong>   <span id="previewEmail"></span></p>
+            <p><strong class="text-[var(--ink)]">Service:</strong> <span id="previewService"></span></p>
+            <p><strong class="text-[var(--ink)]">Date:</strong>    <span id="previewDate"></span></p>
+            <p><strong class="text-[var(--ink)]">Time:</strong>    <span id="previewTime"></span></p>
+            <p><strong class="text-[var(--ink)]">Notes:</strong>   <span id="previewNotes"></span></p>
+        </div>
+        <div class="flex justify-end gap-3 mt-7">
+            <button onclick="closeConfirmModal()"
+                    class="px-5 py-2.5 border border-[var(--desert-rock)]/40 rounded-xl
+                           text-[var(--ink)] text-sm font-semibold hover:bg-[var(--creamed-oat)] transition">
+                Cancel
+            </button>
+            <button onclick="confirmSubmit()"
+                    class="btn-gold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-[.97]">
+                Confirm &amp; Book
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- Fully booked modal --}}
+<div id="fullModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-[#2c241f]/60 p-4">
+    <div class="modal-panel glass rounded-2xl w-[90%] max-w-md p-7 sm:p-10 text-center">
+        {{-- Icon --}}
+        <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--creamed-oat)] text-sm font-bold text-[var(--desert-rock)]">
+            FULL
+        </div>
+        <h2 class="text-2xl mb-3">We're Fully Booked</h2>
+        <p class="text-[var(--muted)] text-sm leading-relaxed">
+            Sorry, we've reached our limit of <strong>10 confirmed appointments</strong>
+            for <strong id="fullModalDate"></strong>. <br><br>
+            Please try again tomorrow, choose a different date, or feel free to
+            <span class="text-[var(--desert-rock)] font-semibold">walk in</span> and
+            we'll do our best to accommodate you.
+        </p>
+        <div class="mt-7 flex flex-col sm:flex-row gap-3 justify-center">
+            <button onclick="closeFullModal(); scrollToDateField();"
+                    class="btn-gold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-[.97]">
+                Try Another Date
+            </button>
+            <button onclick="closeFullModal()"
+                    class="px-6 py-2.5 border border-[var(--desert-rock)]/40 rounded-xl
+                           text-sm font-semibold hover:bg-[var(--creamed-oat)] transition">
+                Dismiss
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+/* Capacity check */
+// Slot data injected from the controller (confirmed counts per date).
+// Shape: { "2025-07-10": 8, "2025-07-11": 10 }
+const bookedSlots = @json($bookedSlots ?? []);
+const MAX_CAPACITY = 10;
+
+function isFullyBooked(dateStr) {
+    return (bookedSlots[dateStr] ?? 0) >= MAX_CAPACITY;
+}
+
+/* Date helpers */
+function todayString() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function formatDateFriendly(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[parseInt(m,10)-1]} ${parseInt(d,10)}, ${y}`;
+}
+
 function formatTime(time) {
     if (!time) return '';
     let [h, m] = time.split(':');
@@ -582,42 +725,375 @@ function formatTime(time) {
     return `${h}:${m} ${ampm}`;
 }
 
+/* Set date min on load */
+document.addEventListener('DOMContentLoaded', function () {
+    const dateField = document.getElementById('field_date');
+    if (dateField) {
+        const today = todayString();
+        dateField.min = today;
+
+        // If old() value is in the past, clear it
+        if (dateField.value && dateField.value < today) {
+            dateField.value = '';
+        }
+
+        dateField.addEventListener('change', validateDate);
+    }
+});
+
+/* Field validation helpers */
+function setHint(id, msg, type) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = `field-hint ${type}`;
+    el.classList.toggle('hidden', !msg);
+}
+
+function setFieldState(fieldId, ok) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    el.classList.toggle('field-error', !ok);
+}
+
+function validateName() {
+    const val = document.getElementById('field_name').value.trim();
+    if (!val) {
+        setHint('hint_name', 'Full name is required.', 'error');
+        setFieldState('field_name', false);
+        return false;
+    }
+    if (val.length < 2) {
+        setHint('hint_name', 'Please enter your full name.', 'error');
+        setFieldState('field_name', false);
+        return false;
+    }
+    setHint('hint_name', '', '');
+    setFieldState('field_name', true);
+    return true;
+}
+
+function validateContact() {
+    const val = document.getElementById('field_contact').value.trim();
+    const ph  = /^(\+63|0)9\d{9}$/.test(val.replace(/\s/g, ''));
+    if (!val) {
+        setHint('hint_contact', 'Contact number is required.', 'error');
+        setFieldState('field_contact', false);
+        return false;
+    }
+    if (!ph) {
+        setHint('hint_contact', 'Enter a valid PH number (e.g. 09171234567).', 'error');
+        setFieldState('field_contact', false);
+        return false;
+    }
+    setHint('hint_contact', 'Looks good.', 'ok');
+    setFieldState('field_contact', true);
+    return true;
+}
+
+function validateEmail() {
+    const val = document.getElementById('field_email').value.trim();
+    if (!val) {
+        setHint('hint_email', '', '');
+        setFieldState('field_email', true);
+        return true;
+    }
+
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    if (!valid) {
+        setHint('hint_email', 'Enter a valid email address or leave it blank.', 'error');
+        setFieldState('field_email', false);
+        return false;
+    }
+
+    setHint('hint_email', 'Email will be saved with this booking.', 'ok');
+    setFieldState('field_email', true);
+    return true;
+}
+
+function validateService() {
+    const val = document.getElementById('field_service').value;
+    if (!val) {
+        setHint('hint_service', 'Please select a service.', 'error');
+        setFieldState('field_service', false);
+        return false;
+    }
+    setHint('hint_service', '', '');
+    setFieldState('field_service', true);
+    return true;
+}
+
+function selectedServiceRequiresConsent() {
+    const select = document.getElementById('field_service');
+    return select?.options[select.selectedIndex]?.dataset.requiresConsent === '1';
+}
+
+function toggleConsentSection() {
+    const section = document.getElementById('consentSection');
+    if (!section) return;
+
+    section.classList.toggle('hidden', !selectedServiceRequiresConsent());
+    if (!selectedServiceRequiresConsent()) {
+        clearSignature();
+        setHint('hint_consent', '', '');
+    } else {
+        resizeSignatureCanvas();
+    }
+}
+
+function validateConsent() {
+    if (!selectedServiceRequiresConsent()) return true;
+
+    if (!document.getElementById('consent_signature').value) {
+        setHint('hint_consent', 'Signature is required for this service.', 'error');
+        document.getElementById('consentSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+
+    setHint('hint_consent', 'Consent signed.', 'ok');
+    return true;
+}
+
+function validateDate() {
+    const dateField = document.getElementById('field_date');
+    const val       = dateField.value;
+    const today     = todayString();
+
+    if (!val) {
+        setHint('hint_date', 'Please choose a date.', 'error');
+        setFieldState('field_date', false);
+        return false;
+    }
+    if (val < today) {
+        setHint('hint_date', 'Date cannot be in the past.', 'error');
+        setFieldState('field_date', false);
+        return false;
+    }
+    // Capacity check
+    if (isFullyBooked(val)) {
+        setHint('hint_date', `Fully booked on ${formatDateFriendly(val)}. Pick another date.`, 'error');
+        setFieldState('field_date', false);
+        return false;
+    }
+    setHint('hint_date', `${formatDateFriendly(val)} is available.`, 'ok');
+    setFieldState('field_date', true);
+    return true;
+}
+
+function validateTime() {
+    const val = document.getElementById('field_time').value;
+    if (!val) {
+        setHint('hint_time', 'Please select a time.', 'error');
+        setFieldState('field_time', false);
+        return false;
+    }
+    setHint('hint_time', '', '');
+    setFieldState('field_time', true);
+    return true;
+}
+
+/* Live validation on blur */
+document.getElementById('field_name')?.addEventListener('blur', validateName);
+document.getElementById('field_contact')?.addEventListener('blur', validateContact);
+document.getElementById('field_email')?.addEventListener('blur', validateEmail);
+document.getElementById('field_service')?.addEventListener('change', () => {
+    validateService();
+    toggleConsentSection();
+});
+document.getElementById('field_time')?.addEventListener('change', validateTime);
+
+/* Open confirm modal */
 function openConfirmModal() {
-    const name = document.querySelector('[name="full_name"]').value;
-    const contact = document.querySelector('[name="contact_number"]').value;
+    const okName    = validateName();
+    const okContact = validateContact();
+    const okEmail   = validateEmail();
+    const okService = validateService();
+    const okDate    = validateDate();
+    const okTime    = validateTime();
+    const okConsent = validateConsent();
 
-    const serviceSelect = document.querySelector('[name="service_id"]');
-    const service = serviceSelect.options[serviceSelect.selectedIndex]?.text;
-
-    const date = document.querySelector('[name="date"]').value;
-    const time = document.querySelector('[name="time"]').value;
-    const notes = document.querySelector('[name="notes"]').value;
-
-    if (!name || !contact || !serviceSelect.value || !date || !time) {
-        alert("Please complete all required fields.");
+    if (!okName || !okContact || !okEmail || !okService || !okDate || !okTime || !okConsent) {
+        // Scroll to first error
+        const firstErr = document.querySelector('.field-error');
+        firstErr?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
 
-    document.getElementById("previewName").textContent = name;
-    document.getElementById("previewContact").textContent = contact;
-    document.getElementById("previewService").textContent = service;
-    document.getElementById("previewDate").textContent = date;
-    document.getElementById("previewTime").textContent = formatTime(time);
-    document.getElementById("previewNotes").textContent = notes || "None";
+    const dateVal = document.getElementById('field_date').value;
 
-    document.getElementById("confirmModal").classList.remove("hidden");
+    // Final capacity check before opening confirm modal
+    if (isFullyBooked(dateVal)) {
+        openFullModal(dateVal);
+        return;
+    }
+
+    // Populate preview
+    const serviceSelect = document.getElementById('field_service');
+    document.getElementById('previewName').textContent    = document.getElementById('field_name').value.trim();
+    document.getElementById('previewContact').textContent = document.getElementById('field_contact').value.trim();
+    document.getElementById('previewEmail').textContent   = document.getElementById('field_email').value.trim() || 'Not provided';
+    document.getElementById('previewService').textContent = serviceSelect.options[serviceSelect.selectedIndex]?.text ?? '';
+    document.getElementById('previewDate').textContent    = formatDateFriendly(dateVal);
+    document.getElementById('previewTime').textContent    = formatTime(document.getElementById('field_time').value);
+    document.getElementById('previewNotes').textContent   = document.getElementById('field_notes').value.trim() || 'None';
+
+    document.getElementById('confirmModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 }
 
+const signatureCanvas = document.getElementById('signatureCanvas');
+const signatureInput = document.getElementById('consent_signature');
+const signatureCtx = signatureCanvas?.getContext('2d');
+let signatureDrawing = false;
+let signatureHasInk = false;
+
+function resizeSignatureCanvas() {
+    if (!signatureCanvas || !signatureCtx) return;
+    const data = signatureHasInk ? signatureCanvas.toDataURL('image/png') : null;
+    const rect = signatureCanvas.getBoundingClientRect();
+    signatureCanvas.width = Math.max(rect.width, 320);
+    signatureCanvas.height = 160;
+    signatureCtx.lineWidth = 2;
+    signatureCtx.lineCap = 'round';
+    signatureCtx.strokeStyle = '#4d4037';
+
+    if (data) {
+        const img = new Image();
+        img.onload = () => signatureCtx.drawImage(img, 0, 0, signatureCanvas.width, signatureCanvas.height);
+        img.src = data;
+    }
+}
+
+function signaturePoint(event) {
+    const rect = signatureCanvas.getBoundingClientRect();
+    const source = event.touches?.[0] ?? event;
+    return {
+        x: source.clientX - rect.left,
+        y: source.clientY - rect.top,
+    };
+}
+
+function startSignature(event) {
+    if (!signatureCanvas || !selectedServiceRequiresConsent()) return;
+    event.preventDefault();
+    signatureDrawing = true;
+    const point = signaturePoint(event);
+    signatureCtx.beginPath();
+    signatureCtx.moveTo(point.x, point.y);
+}
+
+function drawSignature(event) {
+    if (!signatureDrawing || !signatureCanvas) return;
+    event.preventDefault();
+    const point = signaturePoint(event);
+    signatureCtx.lineTo(point.x, point.y);
+    signatureCtx.stroke();
+    signatureHasInk = true;
+    signatureInput.value = signatureCanvas.toDataURL('image/png');
+    setHint('hint_consent', 'Consent signed.', 'ok');
+}
+
+function stopSignature() {
+    signatureDrawing = false;
+}
+
+function clearSignature() {
+    if (!signatureCanvas || !signatureCtx) return;
+    signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+    signatureHasInk = false;
+    signatureInput.value = '';
+}
+
+signatureCanvas?.addEventListener('mousedown', startSignature);
+signatureCanvas?.addEventListener('mousemove', drawSignature);
+window.addEventListener('mouseup', stopSignature);
+signatureCanvas?.addEventListener('touchstart', startSignature, { passive: false });
+signatureCanvas?.addEventListener('touchmove', drawSignature, { passive: false });
+window.addEventListener('touchend', stopSignature);
+window.addEventListener('resize', resizeSignatureCanvas);
+toggleConsentSection();
+
 function closeConfirmModal() {
-    document.getElementById("confirmModal").classList.add("hidden");
+    document.getElementById('confirmModal').classList.add('hidden');
+    document.body.style.overflow = '';
 }
 
 function confirmSubmit() {
-    document.getElementById("confirmModal").classList.add("hidden");
+    closeConfirmModal();
     setTimeout(() => {
-        document.getElementById("bookingForm").requestSubmit();
+        document.getElementById('bookingForm').requestSubmit();
     }, 150);
 }
+
+/* Fully booked modal */
+function openFullModal(dateStr) {
+    document.getElementById('fullModalDate').textContent = formatDateFriendly(dateStr);
+    document.getElementById('fullModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeFullModal() {
+    document.getElementById('fullModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function scrollToDateField() {
+    const f = document.getElementById('field_date');
+    if (f) {
+        f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => f.focus(), 400);
+    }
+}
+
+/* Gallery modal */
+function openGalleryModal(trigger) {
+    const modal   = document.getElementById('galleryModal');
+    const image   = document.getElementById('galleryModalImage');
+    const title   = document.getElementById('galleryModalTitle');
+    const caption = document.getElementById('galleryModalCaption');
+    const text    = document.getElementById('galleryModalText');
+
+    image.src           = trigger.dataset.gallerySrc;
+    image.alt           = trigger.dataset.galleryTitle || 'Gallery image';
+    title.textContent   = trigger.dataset.galleryTitle || '';
+    caption.textContent = trigger.dataset.galleryCaption || '';
+    text.classList.toggle('hidden', !title.textContent && !caption.textContent);
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeGalleryModal() {
+    const modal = document.getElementById('galleryModal');
+    const image = document.getElementById('galleryModalImage');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    image.src = '';
+    document.body.style.overflow = '';
+}
+
+document.getElementById('galleryModal')?.addEventListener('click', function (e) {
+    if (e.target === this) closeGalleryModal();
+});
+
+/* Keyboard escape */
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!document.getElementById('galleryModal')?.classList.contains('hidden')) closeGalleryModal();
+    if (!document.getElementById('confirmModal')?.classList.contains('hidden')) closeConfirmModal();
+    if (!document.getElementById('fullModal')?.classList.contains('hidden'))    closeFullModal();
+});
+
+/* Click outside to close confirm / full-booked modals */
+['confirmModal','fullModal'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    });
+});
 </script>
 
 </body>

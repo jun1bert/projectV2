@@ -1,77 +1,95 @@
+@php
+    $user = auth()->user();
+    $role = $user?->role;
+
+    $links = [
+        [
+            'label' => 'Overview',
+            'href' => route('dashboard'),
+            'active' => request()->routeIs('dashboard'),
+            'roles' => null,
+        ],
+        [
+            'label' => 'Appointments',
+            'href' => route('appointments.index'),
+            'active' => request()->routeIs('appointments.*'),
+            'roles' => ['admin', 'staff', 'reception', 'management'],
+        ],
+        [
+            'label' => 'Services',
+            'href' => route('services.index'),
+            'active' => request()->routeIs('services.*'),
+            'roles' => ['admin', 'management'],
+        ],
+        [
+            'label' => 'Staff',
+            'href' => route('staff.index'),
+            'active' => request()->routeIs('staff.*'),
+            'roles' => ['admin', 'management'],
+        ],
+        [
+            'label' => 'Reports',
+            'href' => route('reports.index'),
+            'active' => request()->routeIs('reports.index'),
+            'roles' => ['admin', 'management'],
+        ],
+        [
+            'label' => 'Customer Services',
+            'href' => route('reports.customer-services'),
+            'active' => request()->routeIs('reports.customer-services'),
+            'roles' => ['admin', 'management'],
+        ],
+        [
+            'label' => 'Gallery',
+            'href' => route('gallery.index'),
+            'active' => request()->routeIs('gallery.*'),
+            'roles' => ['admin', 'management', 'reception'],
+        ],
+    ];
+@endphp
+
 <aside id="sidebar"
-    class="sidebar w-64 text-white flex flex-col p-6
-           fixed top-0 left-0 h-full z-50
-           transform -translate-x-full
-           md:translate-x-0
-           transition-transform duration-300 ease-in-out">
+    class="sidebar fixed left-0 top-0 z-50 flex h-full w-64 -translate-x-full flex-col
+           border-r border-[var(--desert-rock)]/25 p-5 shadow-2xl
+           transition-transform duration-300 ease-in-out md:translate-x-0">
 
-    <h1 class="text-2xl font-bold gold">Martinis & Manicures</h1>
-    <p class="text-xs text-white/60 mt-1">Luxury Spa System</p>
+    <a href="{{ route('dashboard') }}" class="flex items-center gap-3 rounded-2xl border border-[var(--desert-rock)]/15 bg-[var(--feather-white)]/55 px-3 py-3 shadow-sm">
+        <img src="{{ asset('images/martinis-logo.png') }}"
+             alt="Martinis and Manicures"
+             class="h-12 w-auto max-w-[9.5rem] object-contain">
+    </a>
 
-    <nav class="space-y-4 text-sm mt-10">
+    <p class="mt-4 px-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+        Spa Management
+    </p>
 
-        <!-- DASHBOARD (ALL ROLES) -->
-        <a href="/dashboard" class="block hover:text-yellow-300">
-            📊 Overview
-        </a>
-
-        <!-- APPOINTMENTS (ALL ROLES - BUT ROLE-BASED FEATURES INSIDE PAGE) -->
-        @if(in_array(auth()->user()->role, ['admin','staff','management']))
-            <a href="/appointments" class="block hover:text-yellow-300">
-                📅 Appointments
-            </a>
-        @endif
-
-        <!-- ADMIN + MANAGEMENT ONLY -->
-        @if(in_array(auth()->user()->role, ['admin','management']))
-
-            <a href="/services" class="block hover:text-yellow-300">
-                💅 Services
-            </a>
-
-            <a href="/staff" class="block hover:text-yellow-300">
-                👩‍💼 Staff
-            </a>
-
-            <a href="/commissions" class="block hover:text-yellow-300">
-                📊 Commission
-            </a>
-
-            <a href="/reports" class="block hover:text-yellow-300">
-                📈 Reports
-            </a>
-
-            <a href="/inventory" class="block hover:text-yellow-300">
-                📦 Inventory
-            </a>
-
-        @endif
-
-        <!-- GALLERY (ADMIN + MANAGEMENT + STAFF) -->
-        @if(in_array(auth()->user()->role, ['admin','management','staff']))
-            <a href="{{ route('gallery.index') }}" class="block hover:text-yellow-300">
-                🖼️ Gallery
-            </a>
-        @endif
-
+    <nav class="mt-8 space-y-2 text-sm font-semibold">
+        @foreach($links as $link)
+            @if($link['roles'] === null || in_array($role, $link['roles'], true))
+                <a href="{{ $link['href'] }}"
+                   class="block rounded-xl border px-4 py-3 transition
+                          {{ $link['active']
+                              ? 'border-[var(--desert-rock)] bg-[var(--desert-rock)] text-[var(--feather-white)] shadow-lg shadow-[#a48d78]/25'
+                              : 'border-transparent text-[var(--ink)] hover:border-[var(--desert-rock)]/20 hover:bg-[var(--feather-white)]/65 hover:text-[var(--desert-rock)]' }}">
+                    {{ $link['label'] }}
+                </a>
+            @endif
+        @endforeach
     </nav>
 
-    <!-- ROLE DISPLAY -->
-    <div class="mt-auto text-xs text-white/60 pt-6">
-        Logged in as<br>
-        <span class="text-white font-semibold capitalize">
-            {{ auth()->user()->role }}
+    <div class="mt-auto rounded-2xl border border-[var(--desert-rock)]/18 bg-[var(--feather-white)]/70 p-4 text-xs text-[var(--muted)] shadow-sm">
+        <span class="block">Logged in as</span>
+        <span class="mt-1 block text-sm font-bold capitalize text-[var(--ink)]">
+            {{ $role }}
         </span>
     </div>
 
-    <!-- LOGOUT -->
-    <form method="POST" action="{{ route('logout') }}" class="mt-6">
+    <form method="POST" action="{{ route('logout') }}" class="mt-4">
         @csrf
         <button type="submit"
-            class="w-full text-left text-sm px-3 py-2 rounded-lg
-                   bg-red-500/20 hover:bg-red-500/30 text-red-200">
-            🚪 Logout
+            class="w-full rounded-xl border border-red-200/80 bg-red-50 px-4 py-3 text-left
+                   text-sm font-bold text-red-700 transition hover:bg-red-100">
+            Logout
         </button>
     </form>
-
 </aside>
