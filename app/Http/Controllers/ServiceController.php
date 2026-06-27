@@ -33,6 +33,7 @@ class ServiceController extends Controller
             'duration' => $request->duration,
             'description' => $request->description,
             'requires_consent' => $request->boolean('requires_consent'),
+            'is_active' => true,
         ]);
 
         return back()->with('success', 'Service created.');
@@ -48,6 +49,7 @@ class ServiceController extends Controller
             'duration' => 'required|integer|min:1',
             'description' => 'nullable|string',
             'requires_consent' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $service = Service::findOrFail($id);
@@ -58,6 +60,7 @@ class ServiceController extends Controller
             'duration' => $request->duration,
             'description' => $request->description,
             'requires_consent' => $request->boolean('requires_consent'),
+            'is_active' => $request->boolean('is_active'),
         ]);
 
         return back()->with('success', 'Service updated.');
@@ -68,6 +71,11 @@ class ServiceController extends Controller
         $this->authorizeAdmin();
 
         $service = Service::findOrFail($id);
+
+        if ($service->appointments()->exists()) {
+            return back()->with('error', 'This service has appointment history and cannot be deleted. Mark it inactive instead.');
+        }
+
         $service->delete();
 
         return back()->with('success', 'Service deleted.');

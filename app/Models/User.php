@@ -21,6 +21,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
         'role',
     ];
@@ -75,7 +76,11 @@ class User extends Authenticatable
 
     public function assignedAppointments()
     {
-        return $this->hasMany(Appointment::class, 'assigned_to');
+        return $this->belongsToMany(Appointment::class, 'appointment_staff')->withTimestamps();
     }
 
+    public function client()
+    {
+        return $this->hasOne(Client::class);
+    }
 }

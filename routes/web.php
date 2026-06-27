@@ -1,18 +1,17 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\AppointmentPaymentController;
+use App\Http\Controllers\GalleryController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\StaffController;
+use App\Http\Controllers\WelcomeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\AppointmentController;
-use App\Http\Controllers\StaffController;
-use App\Http\Controllers\ServiceController;
-use App\Http\Controllers\AppointmentPaymentController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\WelcomeController;
-use App\Http\Controllers\GalleryController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,8 +49,14 @@ Route::middleware(['auth', 'role:admin,staff,reception,management'])->group(func
     Route::get('/appointments', [AppointmentController::class, 'index'])
         ->name('appointments.index');
 
+    Route::get('/appointments/{id}/consent/signature', [AppointmentController::class, 'consentSignature'])
+        ->name('appointments.consent.signature');
+
     Route::get('/appointments/{id}', [AppointmentController::class, 'show'])
         ->name('appointments.show');
+
+    Route::get('/clients/search', [AppointmentController::class, 'searchClients'])
+        ->name('clients.search');
 });
 
 /*

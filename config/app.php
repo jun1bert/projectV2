@@ -65,7 +65,11 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Asia/Manila'),
+
+    'seed_demo_data' => (bool) env('SEED_DEMO_DATA', false),
+
+    'seed_service_catalog' => (bool) env('SEED_SERVICE_CATALOG', false),
 
     /*
     |--------------------------------------------------------------------------

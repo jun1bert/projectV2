@@ -25,15 +25,21 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'phone' => preg_replace('/\s+/', '', (string) $request->input('phone')),
+        ]);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'phone' => ['required', 'string', 'max:20', 'regex:/^(\+63|0)9\d{9}$/', 'unique:users,phone'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'phone' => preg_replace('/\s+/', '', $request->phone),
             'password' => Hash::make($request->password),
             'role' => 'customer',
         ]);

@@ -2,20 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Appointment;
+use App\Models\Client;
 use App\Models\ConsentForm;
-use App\Models\User;
 use App\Models\Service;
+use App\Models\User;
 use App\Services\AppointmentCompletionNotifier;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AppointmentController extends Controller
 {
     private const DAILY_CONFIRMED_LIMIT = 10;
+
     private const ONLINE_TIME_SLOTS = [
         '09:00',
         '09:30',
@@ -48,18 +51,18 @@ class AppointmentController extends Controller
         ]);
 
         $validated = $request->validate([
-            'full_name'      => 'required|string|min:2|max:255',
+            'full_name' => 'required|string|min:2|max:255',
             'contact_number' => ['required', 'string', 'max:20', 'regex:/^(\+63|0)9\d{9}$/'],
-            'email'          => 'nullable|email|max:255',
-            'service_id'     => 'required|exists:services,id',
-            'date'           => 'required|date|after_or_equal:today',
-            'time'           => 'required|date_format:H:i',
-            'notes'          => 'nullable|string|max:1000',
+            'email' => 'nullable|email|max:255',
+            'service_id' => ['required', Rule::exists('services', 'id')->where('is_active', true)],
+            'date' => 'required|date|after_or_equal:today',
+            'time' => 'required|date_format:H:i',
+            'notes' => 'nullable|string|max:1000',
             'consent_accepted' => 'nullable|boolean',
-            'consent_signature' => 'nullable|string',
+            'consent_signature' => 'nullable|string|max:3000000',
         ], [
             'contact_number.regex' => 'Please enter a valid PH mobile number, for example 09171234567.',
-            'date.after_or_equal'  => 'Please choose today or a future date.',
+            'date.after_or_equal' => 'Please choose today or a future date.',
         ]);
 
         $service = Service::findOrFail($validated['service_id']);
@@ -83,22 +86,24 @@ class AppointmentController extends Controller
                 ]);
         }
 
-        if (!in_array($validated['time'], self::ONLINE_TIME_SLOTS, true)) {
+        if (! in_array($validated['time'], self::ONLINE_TIME_SLOTS, true)) {
             return back()
                 ->withInput()
                 ->withErrors(['time' => 'Please choose one of the available online appointment times.']);
         }
 
         DB::transaction(function () use ($validated, $service) {
+            $client = $this->resolveClient($validated);
             $appointment = Appointment::create([
-                'full_name'      => $validated['full_name'],
+                'full_name' => $validated['full_name'],
                 'contact_number' => $validated['contact_number'],
-                'email'          => $validated['email'] ?? null,
-                'service_id'     => $validated['service_id'],
-                'date'           => $validated['date'],
-                'time'           => $validated['time'],
-                'notes'          => $validated['notes'] ?? null,
-                'status'         => 'pending',
+                'email' => $validated['email'] ?? null,
+                'client_id' => $client->id,
+                'service_id' => $validated['service_id'],
+                'date' => $validated['date'],
+                'time' => $validated['time'],
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'pending',
             ]);
 
             $this->storeConsentIfRequired($appointment, $service, $validated['consent_signature'] ?? null);
@@ -115,15 +120,18 @@ class AppointmentController extends Controller
     */
     public function dashboard()
     {
-        $user  = Auth::user();
+        $user = Auth::user();
         $query = Appointment::query();
 
         if (in_array($user->role, ['admin', 'management', 'reception'])) {
             $appointments = $query->latest()->get();
         } elseif ($user->role === 'staff') {
-            $appointments = $query->where('assigned_to', $user->id)->latest()->get();
+            $appointments = $query->whereHas('assignedStaffMembers', fn ($staff) => $staff->where('users.id', $user->id))->latest()->get();
         } else {
-            $appointments = $query->where('contact_number', $user->phone)->latest()->get();
+            $appointments = $query
+                ->whereHas('client', fn ($client) => $client->where('user_id', $user->id))
+                ->latest()
+                ->get();
         }
 
         return view('dashboard', compact('appointments'));
@@ -136,24 +144,29 @@ class AppointmentController extends Controller
     */
     public function index()
     {
-        if (!in_array(Auth::user()->role, ['admin', 'management', 'staff', 'reception'])) {
+        if (! in_array(Auth::user()->role, ['admin', 'management', 'staff', 'reception'])) {
             abort(403);
         }
 
-        $appointments = Appointment::with(['service', 'assignedStaff', 'invoice', 'consentForm'])->latest()->paginate(8);
-        $staff        = User::where('role', 'staff')->orderBy('name')->get();
-        $services     = Service::all();
+        $appointments = Appointment::with(['service', 'assignedStaffMembers', 'invoice', 'consentForm'])
+            ->when(Auth::user()->role === 'staff', function ($query) {
+                $query->whereHas('assignedStaffMembers', fn ($staff) => $staff->where('users.id', Auth::id()));
+            })
+            ->latest()
+            ->paginate(8);
+        $staff = User::where('role', 'staff')->orderBy('name')->get();
+        $services = Service::all();
         $consentRecords = $appointments->getCollection()
             ->filter(fn ($appointment) => $appointment->consentForm)
             ->mapWithKeys(fn ($appointment) => [
                 $appointment->id => [
                     'name' => $appointment->consentForm->full_name,
-                'contact' => $appointment->consentForm->contact_number,
-                'email' => $appointment->consentForm->email,
-                'service' => $appointment->service->name ?? 'Service',
+                    'contact' => $appointment->consentForm->contact_number,
+                    'email' => $appointment->consentForm->email,
+                    'service' => $appointment->service->name ?? 'Service',
                     'signed_at' => optional($appointment->consentForm->signed_at)->format('M d, Y h:i A'),
                     'consent_text' => $appointment->consentForm->consent_text,
-                    'signature_url' => asset('storage/' . $appointment->consentForm->signature_path),
+                    'signature_url' => route('appointments.consent.signature', $appointment->id),
                 ],
             ]);
         $appointmentRecords = $appointments->getCollection()->mapWithKeys(fn ($appointment) => [
@@ -170,8 +183,8 @@ class AppointmentController extends Controller
                 'notes' => $appointment->notes,
                 'status' => $appointment->status,
                 'booking_type' => $appointment->booking_type ?? 'online',
-                'assigned_to' => $appointment->assigned_to,
-                'assigned_staff' => $appointment->assignedStaff->name ?? 'Unassigned',
+                'assigned_staff_ids' => $appointment->assignedStaffMembers->pluck('id')->values(),
+                'assigned_staff' => $appointment->assigned_staff_names,
                 'payment_status' => $appointment->payment_status ?? 'unpaid',
                 'has_invoice' => (bool) $appointment->invoice,
                 'requires_consent' => (bool) ($appointment->service->requires_consent ?? false),
@@ -186,7 +199,7 @@ class AppointmentController extends Controller
 
     public function update(Request $request, $id)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'management', 'reception'])) {
+        if (! in_array(Auth::user()->role, ['admin', 'management', 'reception'])) {
             abort(403);
         }
 
@@ -195,25 +208,26 @@ class AppointmentController extends Controller
         ]);
 
         $validated = $request->validate([
-            'full_name'      => 'required|string|min:2|max:255',
+            'full_name' => 'required|string|min:2|max:255',
             'contact_number' => ['required', 'string', 'max:20', 'regex:/^(\+63|0)9\d{9}$/'],
-            'email'          => 'nullable|email|max:255',
-            'service_id'     => 'required|exists:services,id',
-            'date'           => 'required|date',
-            'time'           => 'required|date_format:H:i',
-            'notes'          => 'nullable|string|max:1000',
-            'status'         => 'required|in:pending,confirmed,cancelled,completed',
-            'assigned_to'    => 'nullable|exists:users,id',
+            'email' => 'nullable|email|max:255',
+            'service_id' => 'required|exists:services,id',
+            'date' => 'required|date',
+            'time' => 'required|date_format:H:i',
+            'notes' => 'nullable|string|max:1000',
+            'status' => 'required|in:pending,confirmed,cancelled,completed',
+            'assigned_staff_ids' => 'nullable|array',
+            'assigned_staff_ids.*' => 'integer|distinct|exists:users,id',
         ], [
             'contact_number.regex' => 'Please enter a valid PH mobile number, for example 09171234567.',
         ]);
 
-        if ($request->filled('assigned_to') && !$this->isStaffMember((int) $request->assigned_to)) {
+        if (! $this->areStaffMembers($validated['assigned_staff_ids'] ?? [])) {
             return response()->json(['success' => false, 'message' => 'Selected user is not a staff member.'], 422);
         }
 
         try {
-            $completedAppointment = DB::transaction(function () use ($id, $validated, $request) {
+            $completedAppointment = DB::transaction(function () use ($id, $validated) {
                 $appointment = Appointment::with('invoice')->findOrFail($id);
                 $oldStatus = $appointment->status;
 
@@ -238,10 +252,12 @@ class AppointmentController extends Controller
                     'time' => $validated['time'],
                     'notes' => $validated['notes'] ?? null,
                     'status' => $validated['status'],
-                    'assigned_to' => $validated['status'] === 'cancelled' ? null : ($request->assigned_to ?: null),
                 ]);
 
+                $appointment->client_id = $this->resolveClient($validated)->id;
+
                 $appointment->save();
+                $this->syncAssignedStaff($appointment, $validated['status'] === 'cancelled' ? [] : ($validated['assigned_staff_ids'] ?? []));
 
                 return $oldStatus !== 'completed' && $appointment->status === 'completed'
                     ? $appointment->fresh(['service'])
@@ -286,16 +302,17 @@ class AppointmentController extends Controller
     */
     public function updateStatus(Request $request, $id)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'management', 'reception'])) {
+        if (! in_array(Auth::user()->role, ['admin', 'management', 'reception'])) {
             abort(403);
         }
 
         $request->validate([
-            'status'      => 'required|in:pending,confirmed,cancelled,completed',
-            'assigned_to' => 'nullable|exists:users,id',
+            'status' => 'required|in:pending,confirmed,cancelled,completed',
+            'assigned_staff_ids' => 'nullable|array',
+            'assigned_staff_ids.*' => 'integer|distinct|exists:users,id',
         ]);
 
-        if ($request->filled('assigned_to') && !$this->isStaffMember((int) $request->assigned_to)) {
+        if (! $this->areStaffMembers($request->input('assigned_staff_ids', []))) {
             return response()->json(['success' => false, 'message' => 'Selected user is not a staff member.'], 422);
         }
 
@@ -303,7 +320,7 @@ class AppointmentController extends Controller
             [$appointment, $shouldNotifyCompletion] = DB::transaction(function () use ($request, $id) {
 
                 $appointment = Appointment::findOrFail($id);
-                $oldStatus   = $appointment->status;
+                $oldStatus = $appointment->status;
 
                 if (
                     $request->status === 'confirmed' &&
@@ -320,15 +337,11 @@ class AppointmentController extends Controller
                 | ASSIGN / UNASSIGN STAFF
                 |--------------------------------------------------------------
                 */
-                if ($request->status === 'confirmed' && $request->filled('assigned_to')) {
-                    $appointment->assigned_to = $request->assigned_to;
-                }
-
-                if ($request->status === 'cancelled') {
-                    $appointment->assigned_to = null;
-                }
-
                 $appointment->save();
+                $this->syncAssignedStaff(
+                    $appointment,
+                    $request->status === 'cancelled' ? [] : $request->input('assigned_staff_ids', [])
+                );
 
                 return [
                     $appointment,
@@ -350,7 +363,7 @@ class AppointmentController extends Controller
 
             Log::error('Failed to update appointment status', [
                 'appointment_id' => $id,
-                'error'          => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -361,7 +374,7 @@ class AppointmentController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to update appointment status', [
                 'appointment_id' => $id,
-                'error'          => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -372,7 +385,7 @@ class AppointmentController extends Controller
 
         return response()->json([
             'success' => true,
-            'status'  => $appointment->status,
+            'status' => $appointment->status,
             'message' => 'Status updated successfully.',
         ]);
     }
@@ -384,19 +397,50 @@ class AppointmentController extends Controller
     */
     public function show($id)
     {
-        $user        = Auth::user();
         $appointment = Appointment::findOrFail($id);
-
-        $isStaffOrAdmin = in_array($user->role, ['admin', 'management', 'reception'])
-            || ($user->role === 'staff' && $appointment->assigned_to === $user->id);
-
-        $isOwner = $appointment->contact_number === $user->phone;
-
-        if (!$isStaffOrAdmin && !$isOwner) {
-            abort(403);
-        }
+        $this->authorizeAppointmentAccess($appointment);
 
         return response()->json($appointment);
+    }
+
+    public function consentSignature($id)
+    {
+        $appointment = Appointment::with('consentForm')->findOrFail($id);
+        $this->authorizeAppointmentAccess($appointment);
+
+        abort_unless($appointment->consentForm, 404);
+        $path = $appointment->consentForm->signature_path;
+
+        if (Storage::disk('local')->exists($path)) {
+            return Storage::disk('local')->response($path);
+        }
+
+        // Temporary compatibility for signatures created before private storage was introduced.
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path);
+    }
+
+    public function searchClients(Request $request)
+    {
+        $search = trim(str_replace(['%', '_'], '', (string) $request->query('q')));
+        if (mb_strlen($search) < 2) {
+            return response()->json([]);
+        }
+
+        return response()->json(
+            Client::query()
+                ->withCount('appointments')
+                ->where(function ($query) use ($search) {
+                    $query->where('full_name', 'like', "%{$search}%")
+                        ->orWhere('contact_number', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orderByDesc('appointments_count')
+                ->orderBy('full_name')
+                ->limit(8)
+                ->get(['id', 'full_name', 'contact_number', 'email'])
+        );
     }
 
     /*
@@ -406,7 +450,7 @@ class AppointmentController extends Controller
     */
     public function storeWalkIn(Request $request)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'management', 'staff', 'reception'])) {
+        if (! in_array(Auth::user()->role, ['admin', 'management', 'staff', 'reception'])) {
             abort(403);
         }
 
@@ -415,18 +459,20 @@ class AppointmentController extends Controller
         ]);
 
         $validated = $request->validate([
-            'full_name'      => 'required|string|min:2|max:255',
+            'full_name' => 'required|string|min:2|max:255',
             'contact_number' => ['required', 'string', 'max:20', 'regex:/^(\+63|0)9\d{9}$/'],
-            'email'          => 'nullable|email|max:255',
-            'service_id'     => 'required|exists:services,id',
-            'date'           => 'required|date|after_or_equal:today',
-            'time'           => 'required|date_format:H:i',
-            'assigned_to'    => 'nullable|exists:users,id',
+            'email' => 'nullable|email|max:255',
+            'client_id' => 'nullable|integer|exists:clients,id',
+            'service_id' => ['required', Rule::exists('services', 'id')->where('is_active', true)],
+            'date' => 'required|date|after_or_equal:today',
+            'time' => 'required|date_format:H:i',
+            'assigned_staff_ids' => 'nullable|array',
+            'assigned_staff_ids.*' => 'integer|distinct|exists:users,id',
             'consent_accepted' => 'nullable|boolean',
-            'consent_signature' => 'nullable|string',
+            'consent_signature' => 'nullable|string|max:3000000',
         ], [
             'contact_number.regex' => 'Please enter a valid PH mobile number, for example 09171234567.',
-            'date.after_or_equal'  => 'Please choose today or a future date.',
+            'date.after_or_equal' => 'Please choose today or a future date.',
         ]);
 
         $service = Service::findOrFail($validated['service_id']);
@@ -444,23 +490,30 @@ class AppointmentController extends Controller
             ], 422);
         }
 
-        if ($request->filled('assigned_to') && !$this->isStaffMember((int) $request->assigned_to)) {
+        if (! $this->areStaffMembers($validated['assigned_staff_ids'] ?? [])) {
             return response()->json(['success' => false, 'message' => 'Selected user is not a staff member.'], 422);
         }
 
         try {
-            $appointment = DB::transaction(function () use ($validated, $request, $service) {
+            $appointment = DB::transaction(function () use ($validated, $service) {
+                $client = $this->resolveClient(
+                    $validated,
+                    $validated['client_id'] ?? null,
+                    empty($validated['client_id'])
+                );
                 $appointment = Appointment::create([
-                    'full_name'      => $validated['full_name'],
+                    'full_name' => $validated['full_name'],
                     'contact_number' => $validated['contact_number'],
-                    'email'          => $validated['email'] ?? null,
-                    'service_id'     => $validated['service_id'],
-                    'date'           => $validated['date'],
-                    'time'           => $validated['time'],
-                    'status'         => 'confirmed',
-                    'booking_type'   => 'walk-in',
-                    'assigned_to'    => $request->assigned_to,
+                    'email' => $validated['email'] ?? null,
+                    'client_id' => $client->id,
+                    'service_id' => $validated['service_id'],
+                    'date' => $validated['date'],
+                    'time' => $validated['time'],
+                    'status' => 'confirmed',
+                    'booking_type' => 'walk-in',
                 ]);
+
+                $this->syncAssignedStaff($appointment, $validated['assigned_staff_ids'] ?? []);
 
                 $this->storeConsentIfRequired($appointment, $service, $validated['consent_signature'] ?? null);
 
@@ -468,8 +521,8 @@ class AppointmentController extends Controller
             });
 
             return response()->json([
-                'success'     => true,
-                'message'     => 'Walk-in appointment created successfully.',
+                'success' => true,
+                'message' => 'Walk-in appointment created successfully.',
                 'appointment' => $appointment,
             ]);
 
@@ -520,13 +573,60 @@ class AppointmentController extends Controller
         return User::where('id', $userId)->where('role', 'staff')->exists();
     }
 
+    private function areStaffMembers(array $userIds): bool
+    {
+        if ($userIds === []) {
+            return true;
+        }
+
+        return User::whereIn('id', $userIds)->where('role', 'staff')->count() === count($userIds);
+    }
+
+    private function resolveClient(array $data, ?int $clientId = null, bool $forceNew = false): Client
+    {
+        $contact = $this->normalizeContactNumber($data['contact_number']);
+        $user = User::query()
+            ->where('role', 'customer')
+            ->whereIn('phone', array_unique([$contact, $data['contact_number']]))
+            ->first();
+
+        $client = $forceNew
+            ? new Client
+            : (($clientId ? Client::findOrFail($clientId) : null)
+                ?? ($user?->client)
+                ?? Client::where('contact_number', $contact)->first()
+                ?? new Client);
+
+        $client->fill([
+            'user_id' => $user?->id ?? $client->user_id,
+            'full_name' => $data['full_name'],
+            'contact_number' => $contact,
+            'email' => $data['email'] ?? $client->email,
+        ])->save();
+
+        return $client;
+    }
+
+    private function normalizeContactNumber(string $contact): string
+    {
+        $contact = preg_replace('/\s+/', '', $contact);
+
+        return str_starts_with($contact, '+63') ? '0'.substr($contact, 3) : $contact;
+    }
+
+    private function syncAssignedStaff(Appointment $appointment, array $userIds): void
+    {
+        $userIds = array_values(array_unique(array_map('intval', $userIds)));
+        $appointment->assignedStaffMembers()->sync($userIds);
+    }
+
     private function storeConsentIfRequired(Appointment $appointment, Service $service, ?string $signatureData): void
     {
-        if (!$service->requires_consent) {
+        if (! $service->requires_consent) {
             return;
         }
 
-        if (!$signatureData || !preg_match('/^data:image\/png;base64,/', $signatureData)) {
+        if (! $signatureData || ! preg_match('/^data:image\/png;base64,/', $signatureData)) {
             throw new \InvalidArgumentException('A valid signature is required.');
         }
 
@@ -535,8 +635,12 @@ class AppointmentController extends Controller
             throw new \InvalidArgumentException('The signature could not be saved.');
         }
 
-        $path = 'consent-signatures/appointment-' . $appointment->id . '-' . now()->format('YmdHis') . '.png';
-        Storage::disk('public')->put($path, $image);
+        if (strlen($image) > 2 * 1024 * 1024) {
+            throw new \InvalidArgumentException('The signature image is too large.');
+        }
+
+        $path = 'consent-signatures/appointment-'.$appointment->id.'-'.now()->format('YmdHis').'.png';
+        Storage::disk('local')->put($path, $image);
 
         ConsentForm::create([
             'appointment_id' => $appointment->id,
@@ -560,5 +664,16 @@ class AppointmentController extends Controller
             'I agree to follow the aftercare guidance provided by Martinis and Manicures.',
             'I have read and agree to these statements.',
         ]);
+    }
+
+    private function authorizeAppointmentAccess(Appointment $appointment): void
+    {
+        $user = Auth::user();
+        $isPrivileged = in_array($user->role, ['admin', 'management', 'reception'])
+            || ($user->role === 'staff' && $appointment->assignedStaffMembers()->where('users.id', $user->id)->exists());
+        $isOwner = $user->role === 'customer'
+            && $appointment->client()->where('user_id', $user->id)->exists();
+
+        abort_unless($isPrivileged || $isOwner, 403);
     }
 }

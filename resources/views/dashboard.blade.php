@@ -150,7 +150,7 @@
                     </div>
                     <div class="mt-3 flex items-center justify-between gap-3 text-xs font-semibold text-[var(--muted)]">
                         <span>{{ substr((string) $appointment->time, 0, 5) }}</span>
-                        <span>{{ $appointment->assignedStaff->name ?? 'Unassigned' }}</span>
+                        <span>{{ $appointment->assigned_staff_names }}</span>
                     </div>
                 </article>
             @empty

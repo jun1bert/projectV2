@@ -20,4 +20,8 @@ class Service extends Model
         'is_active' => 'boolean',
     ];
 
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
 }

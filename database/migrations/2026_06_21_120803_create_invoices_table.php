@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('appointment_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('appointment_id')->unique()->constrained()->cascadeOnDelete();
             $table->decimal('service_total', 10, 2)->default(0);
             $table->decimal('grand_total', 10, 2)->default(0);
             $table->string('payment_method')->nullable();

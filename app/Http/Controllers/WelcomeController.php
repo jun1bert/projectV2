@@ -1,9 +1,11 @@
 <?php
+
 // app/Http/Controllers/WelcomeController.php
+
 namespace App\Http\Controllers;
 
-use App\Models\GalleryImage;
 use App\Models\Appointment;
+use App\Models\GalleryImage;
 use App\Models\Service;
 
 class WelcomeController extends Controller

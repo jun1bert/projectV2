@@ -102,13 +102,36 @@
         box-shadow: 0 18px 50px rgba(77, 64, 55, .08);
     }
 
-    .action-select {
-        min-width: 132px;
-    }
+    .staff-picker-hint { font-size: 10px; line-height: 1.25; color: var(--muted); }
 
-    .assign-select {
-        min-width: 158px;
+    .staff-picker { position: relative; width: 168px; max-width: 100%; }
+    .staff-picker-wide { width: 100%; }
+    .staff-picker-trigger {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+        text-align: left;
     }
+    .staff-picker-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .staff-picker-menu {
+        position: absolute;
+        z-index: 70;
+        top: calc(100% + .35rem);
+        left: 0;
+        width: min(260px, 80vw);
+        overflow: hidden;
+        border: 1px solid rgba(164, 141, 120, .24);
+        border-radius: .8rem;
+        background: var(--feather-white);
+        box-shadow: 0 16px 38px rgba(77, 64, 55, .18);
+    }
+    .staff-picker-options { max-height: 180px; overflow-y: auto; padding: .4rem; }
+    .staff-picker-option { display: flex; cursor: pointer; align-items: center; gap: .55rem; border-radius: .55rem; padding: .5rem .55rem; font-size: .75rem; }
+    .staff-picker-option:hover { background: rgba(230, 218, 200, .45); }
+    .staff-picker-footer { display: flex; justify-content: flex-end; border-top: 1px solid rgba(164, 141, 120, .18); padding: .45rem; }
+    #editAppointmentModal > div > .theme-card { overflow: visible; }
 
     #desktopTable { display: none; }
     @media (min-width: 768px) {
@@ -180,7 +203,7 @@
         </div>
     </div>
 
-    <div id="desktopTable" class="table-shell overflow-hidden rounded-2xl">
+    <div id="desktopTable" class="table-shell overflow-visible rounded-2xl">
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-[rgba(164,141,120,.18)] bg-[rgba(230,218,200,.32)] text-xs uppercase tracking-wide text-[var(--muted)]">
@@ -236,6 +259,9 @@
                             </span>
                             @endif
                         </div>
+                        <p class="mt-2 max-w-44 text-xs leading-5 text-[var(--muted)]">
+                            {{ $appointment->assigned_staff_names }}
+                        </p>
                     </td>
 
                     @if($canManage)
@@ -250,24 +276,8 @@
                             <button type="button"
                                     class="edit-btn muted-button rounded-xl px-3 py-2 text-xs font-semibold transition"
                                     data-id="{{ $appointment->id }}">
-                                Edit
+                                Manage
                             </button>
-                            @endif
-
-                            <select class="status-select action-select theme-field w-auto px-3 py-2 text-xs" data-id="{{ $appointment->id }}">
-                                <option value="pending" @selected($appointment->status === 'pending')>Pending</option>
-                                <option value="confirmed" @selected($appointment->status === 'confirmed')>Confirmed</option>
-                                <option value="cancelled" @selected($appointment->status === 'cancelled')>Cancelled</option>
-                                <option value="completed" @selected($appointment->status === 'completed')>Completed</option>
-                            </select>
-
-                            @if($canAssign)
-                            <select class="assign-select theme-field w-auto px-3 py-2 text-xs" data-id="{{ $appointment->id }}" data-service-id="{{ $appointment->service_id }}">
-                                <option value="">Unassigned</option>
-                                @foreach($staff ?? [] as $member)
-                                <option value="{{ $member->id }}" @selected($appointment->assigned_to == $member->id)>{{ $member->name }}</option>
-                                @endforeach
-                            </select>
                             @endif
 
                             @if($appointment->status === 'completed' && ($appointment->payment_status ?? null) !== 'paid')
@@ -309,7 +319,7 @@
 
     <div id="mobileCards" class="grid gap-3">
         @forelse($appointments as $appointment)
-        <article class="filter-row theme-card overflow-hidden rounded-2xl"
+        <article class="filter-row theme-card overflow-visible rounded-2xl"
                  data-search="{{ strtolower($appointment->full_name.' '.$appointment->contact_number.' '.($appointment->email ?? '').' '.($appointment->service->name ?? '').' '.$appointment->status.' '.($appointment->booking_type ?? 'online')) }}"
                  data-status="{{ $appointment->status }}"
                  data-price="{{ $appointment->service->price ?? 0 }}">
@@ -356,6 +366,10 @@
                     <span>Schedule</span>
                     <span class="text-right font-medium text-[var(--ink)]">{{ $appointment->date }} at {{ $appointment->time }}</span>
                 </div>
+                <div class="grid grid-cols-[82px_1fr] gap-3">
+                    <span>Staff</span>
+                    <span class="text-right font-medium text-[var(--ink)]">{{ $appointment->assigned_staff_names }}</span>
+                </div>
             </div>
 
             @if($canManage)
@@ -369,24 +383,8 @@
                 <button type="button"
                         class="edit-btn muted-button rounded-xl px-3 py-2.5 text-xs font-semibold transition"
                         data-id="{{ $appointment->id }}">
-                    Edit
+                    Manage
                 </button>
-                @endif
-
-                <select class="status-select theme-field px-3 py-2.5 text-xs" data-id="{{ $appointment->id }}">
-                    <option value="pending" @selected($appointment->status === 'pending')>Pending</option>
-                    <option value="confirmed" @selected($appointment->status === 'confirmed')>Confirmed</option>
-                    <option value="cancelled" @selected($appointment->status === 'cancelled')>Cancelled</option>
-                    <option value="completed" @selected($appointment->status === 'completed')>Completed</option>
-                </select>
-
-                @if($canAssign)
-                <select class="assign-select theme-field px-3 py-2.5 text-xs" data-id="{{ $appointment->id }}" data-service-id="{{ $appointment->service_id }}">
-                    <option value="">Unassigned</option>
-                    @foreach($staff ?? [] as $member)
-                    <option value="{{ $member->id }}" @selected($appointment->assigned_to == $member->id)>{{ $member->name }}</option>
-                    @endforeach
-                </select>
                 @endif
 
                 @if($appointment->status === 'completed' && ($appointment->payment_status ?? null) !== 'paid')
@@ -441,7 +439,7 @@
     <div class="flex min-h-full items-center justify-center p-4">
         <button type="button" class="fixed inset-0 bg-black/45 backdrop-blur-sm" onclick="closeWalkIn()" aria-label="Close walk-in modal"></button>
 
-        <div class="theme-card relative w-full max-w-lg overflow-hidden rounded-2xl">
+        <div class="theme-card relative w-full max-w-lg overflow-visible rounded-2xl">
             <div class="flex items-center justify-between border-b border-[rgba(164,141,120,.16)] px-5 py-4">
                 <div>
                     <h2 class="text-lg font-semibold text-[var(--ink)]">New Walk-in</h2>
@@ -452,20 +450,23 @@
 
             <form id="walkInForm" class="space-y-4 px-5 py-5">
                 @csrf
+                <input type="hidden" name="client_id" id="walkInClientId">
 
-                <div>
+                <div class="relative">
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Full name</label>
-                    <input type="text" name="full_name" class="theme-field px-3 py-2.5" required>
+                    <input type="text" id="walkInFullName" name="full_name" class="theme-field px-3 py-2.5" autocomplete="off" required>
+                    <div id="walkInClientSuggestions" class="absolute z-50 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-xl border border-[rgba(164,141,120,.24)] bg-[var(--feather-white)] p-1 shadow-xl"></div>
+                    <p id="walkInClientHint" class="mt-1.5 text-xs text-[var(--muted)]">Type at least 2 characters to find a returning client.</p>
                 </div>
 
                 <div>
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Contact number</label>
-                    <input type="text" name="contact_number" class="theme-field px-3 py-2.5" placeholder="09XXXXXXXXX" required>
+                    <input type="text" id="walkInContactNumber" name="contact_number" class="theme-field px-3 py-2.5" placeholder="09XXXXXXXXX" required>
                 </div>
 
                 <div>
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Email address <span class="font-normal">(optional)</span></label>
-                    <input type="email" name="email" class="theme-field px-3 py-2.5" placeholder="client@example.com">
+                    <input type="email" id="walkInEmail" name="email" class="theme-field px-3 py-2.5" placeholder="client@example.com">
                 </div>
 
                 <div>
@@ -495,13 +496,13 @@
 
                 @if($canAssign)
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Assign staff</label>
-                    <select id="walkInAssignedTo" name="assigned_to" class="theme-field px-3 py-2.5">
-                        <option value="">Unassigned</option>
+                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Assign staff <span class="font-normal">(optional)</span></label>
+                    <select multiple size="4" id="walkInAssignedTo" name="assigned_staff_ids[]" class="theme-field max-h-32 px-3 py-2.5">
                         @foreach($staff ?? [] as $member)
                         <option value="{{ $member->id }}">{{ $member->name }}</option>
                         @endforeach
                     </select>
+                    <p class="staff-picker-hint mt-1.5">Choose one or more staff members.</p>
                 </div>
                 @endif
 
@@ -529,7 +530,7 @@
     <div class="flex min-h-full items-end justify-center p-4 sm:items-center">
         <button type="button" class="fixed inset-0 bg-black/45 backdrop-blur-sm" onclick="closePreviewModal()" aria-label="Close preview modal"></button>
 
-        <div class="theme-card relative w-full max-w-2xl overflow-hidden rounded-2xl">
+        <div class="theme-card relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl">
             <div class="flex items-start justify-between gap-3 border-b border-[rgba(164,141,120,.16)] px-5 py-4">
                 <div>
                     <h2 class="text-lg font-semibold text-[var(--ink)]">Appointment Preview</h2>
@@ -563,6 +564,25 @@
                 <div class="rounded-xl bg-[rgba(230,218,200,.28)] p-4 sm:col-span-2">
                     <p class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Notes</p>
                     <p id="previewNotes" class="mt-1 text-sm leading-relaxed text-[var(--ink)]"></p>
+                </div>
+                <div class="rounded-xl border border-[rgba(164,141,120,.18)] bg-white p-4 sm:col-span-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Client Consent</p>
+                        <span id="previewConsentStatus" class="rounded-full px-2.5 py-1 text-xs font-semibold"></span>
+                    </div>
+                    <p id="previewConsentMeta" class="mt-2 text-xs text-[var(--muted)]"></p>
+                    <div id="previewConsentDetails" class="mt-4 hidden space-y-4">
+                        <div>
+                            <p class="text-xs font-semibold text-[var(--muted)]">Recorded terms</p>
+                            <p id="previewConsentText" class="mt-1 whitespace-pre-line rounded-xl bg-[rgba(230,218,200,.28)] p-3 text-sm leading-relaxed text-[var(--ink)]"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-[var(--muted)]">Client signature</p>
+                            <div class="mt-1 rounded-xl border border-[rgba(164,141,120,.18)] bg-white p-3">
+                                <img id="previewConsentSignature" src="" alt="Client consent signature" class="max-h-40 w-full object-contain">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -635,13 +655,13 @@
                         </select>
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Assign staff</label>
-                        <select id="edit_assigned_to" name="assigned_to" class="theme-field px-3 py-2.5">
-                            <option value="">Unassigned</option>
+                        <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Assign staff <span class="font-normal">(optional)</span></label>
+                        <select multiple size="4" id="edit_assigned_staff_ids" name="assigned_staff_ids[]" class="theme-field max-h-32 px-3 py-2.5">
                             @foreach($staff ?? [] as $member)
                             <option value="{{ $member->id }}">{{ $member->name }}</option>
                             @endforeach
                         </select>
+                        <p class="staff-picker-hint mt-1.5">Choose one or more staff members.</p>
                     </div>
                 </div>
 
@@ -765,6 +785,72 @@ function escapeHtml(value) {
     }[char]));
 }
 
+function enhanceStaffPicker(select) {
+    if (!select || select.dataset.enhanced === 'true') return;
+    select.dataset.enhanced = 'true';
+    select.classList.add('hidden');
+
+    const picker = document.createElement('div');
+    picker.className = 'staff-picker staff-picker-wide';
+    picker.innerHTML = `
+        <button type="button" class="staff-picker-trigger theme-field px-3 py-2.5 text-xs" aria-expanded="false">
+            <span>Select staff</span><b aria-hidden="true">⌄</b>
+        </button>
+        <div class="staff-picker-menu hidden">
+            <div class="staff-picker-options"></div>
+            <div class="staff-picker-footer">
+                <button type="button" class="staff-picker-done theme-button rounded-lg px-3 py-1.5 text-xs font-semibold">Done</button>
+            </div>
+        </div>`;
+    select.insertAdjacentElement('afterend', picker);
+
+    const trigger = picker.querySelector('.staff-picker-trigger');
+    const menu = picker.querySelector('.staff-picker-menu');
+    const options = picker.querySelector('.staff-picker-options');
+
+    function updateSummary() {
+        const names = Array.from(select.selectedOptions).map((option) => option.textContent.trim());
+        trigger.querySelector('span').textContent = names.length === 0
+            ? 'Unassigned'
+            : names.length <= 2 ? names.join(', ') : `${names.length} staff selected`;
+        picker.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.checked = Array.from(select.selectedOptions).some((option) => option.value === checkbox.value);
+        });
+    }
+
+    Array.from(select.options).forEach((option) => {
+        const label = document.createElement('label');
+        label.className = 'staff-picker-option';
+        label.innerHTML = `<input type="checkbox" value="${escapeHtml(option.value)}" class="rounded border-[var(--soft-sandstone)]"> <span>${escapeHtml(option.textContent)}</span>`;
+        label.querySelector('input').addEventListener('change', (event) => {
+            option.selected = event.target.checked;
+            updateSummary();
+        });
+        options.appendChild(label);
+    });
+
+    trigger.addEventListener('click', () => {
+        const opening = menu.classList.contains('hidden');
+        document.querySelectorAll('.staff-picker-menu').forEach((other) => other.classList.add('hidden'));
+        menu.classList.toggle('hidden', !opening);
+        trigger.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    });
+
+    picker.querySelector('.staff-picker-done').addEventListener('click', () => {
+        menu.classList.add('hidden');
+        trigger.setAttribute('aria-expanded', 'false');
+    });
+
+    select._updateStaffPicker = updateSummary;
+    updateSummary();
+}
+
+document.querySelectorAll('select[multiple][name="assigned_staff_ids[]"]').forEach(enhanceStaffPicker);
+document.addEventListener('click', (event) => {
+    if (event.target.closest('.staff-picker')) return;
+    document.querySelectorAll('.staff-picker-menu').forEach((menu) => menu.classList.add('hidden'));
+});
+
 function showToast(message, type = 'error') {
     document.getElementById('pageToast')?.remove();
 
@@ -805,7 +891,93 @@ function closeWalkIn() {
     walkInModal?.classList.add('hidden');
     setBodyLock(false);
     clearWalkInSignature();
+    closeClientSuggestions();
 }
+
+const walkInClientId = document.getElementById('walkInClientId');
+const walkInFullName = document.getElementById('walkInFullName');
+const walkInContactNumber = document.getElementById('walkInContactNumber');
+const walkInEmail = document.getElementById('walkInEmail');
+const walkInClientSuggestions = document.getElementById('walkInClientSuggestions');
+const walkInClientHint = document.getElementById('walkInClientHint');
+let clientSearchTimer;
+let fillingClient = false;
+
+function closeClientSuggestions() {
+    walkInClientSuggestions?.classList.add('hidden');
+}
+
+function selectExistingClient(client) {
+    fillingClient = true;
+    walkInClientId.value = client.id;
+    walkInFullName.value = client.full_name;
+    walkInContactNumber.value = client.contact_number;
+    walkInEmail.value = client.email || '';
+    walkInClientHint.textContent = `Returning client selected · ${client.appointments_count} previous visit${client.appointments_count === 1 ? '' : 's'}`;
+    walkInClientHint.className = 'mt-1.5 text-xs font-semibold text-emerald-700';
+    closeClientSuggestions();
+    fillingClient = false;
+}
+
+function useNewClient() {
+    walkInClientId.value = '';
+    walkInClientHint.textContent = 'New client — a client record will be created with these details.';
+    walkInClientHint.className = 'mt-1.5 text-xs font-semibold text-[var(--desert-rock)]';
+    closeClientSuggestions();
+}
+
+async function searchPreviousClients(search) {
+    if (search.length < 2) {
+        closeClientSuggestions();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/clients/search?q=${encodeURIComponent(search)}`, {
+            headers: { 'Accept': 'application/json' },
+        });
+        if (!response.ok) return;
+        const clients = await response.json();
+
+        walkInClientSuggestions.innerHTML = '';
+        clients.forEach((client) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'block w-full rounded-lg px-3 py-2.5 text-left transition hover:bg-[rgba(230,218,200,.45)]';
+            button.innerHTML = `
+                <span class="block text-sm font-semibold text-[var(--ink)]">${escapeHtml(client.full_name)}</span>
+                <span class="mt-0.5 block text-xs text-[var(--muted)]">${escapeHtml(client.contact_number)}${client.email ? ` · ${escapeHtml(client.email)}` : ''} · ${client.appointments_count} visit${client.appointments_count === 1 ? '' : 's'}</span>`;
+            button.addEventListener('click', () => selectExistingClient(client));
+            walkInClientSuggestions.appendChild(button);
+        });
+
+        const newButton = document.createElement('button');
+        newButton.type = 'button';
+        newButton.className = 'mt-1 block w-full border-t border-[rgba(164,141,120,.18)] px-3 py-2.5 text-left text-xs font-semibold text-[var(--desert-rock)] hover:bg-[rgba(230,218,200,.35)]';
+        newButton.textContent = `Create new client “${search}”`;
+        newButton.addEventListener('click', useNewClient);
+        walkInClientSuggestions.appendChild(newButton);
+        walkInClientSuggestions.classList.remove('hidden');
+    } catch (_) {
+        closeClientSuggestions();
+    }
+}
+
+[walkInFullName, walkInContactNumber, walkInEmail].forEach((input) => {
+    input?.addEventListener('input', () => {
+        if (fillingClient) return;
+        if (walkInClientId.value) useNewClient();
+        clearTimeout(clientSearchTimer);
+        const search = input.value.trim();
+        clientSearchTimer = setTimeout(() => searchPreviousClients(search), 300);
+    });
+});
+
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('#walkInClientSuggestions') && !event.target.closest('#walkInFullName') && !event.target.closest('#walkInContactNumber') && !event.target.closest('#walkInEmail')) {
+        closeClientSuggestions();
+    }
+});
 
 function walkInRequiresConsent() {
     const select = document.getElementById('walkInService');
@@ -907,12 +1079,38 @@ function openPreviewModal(id) {
     document.getElementById('previewStatus').textContent = appointment.status;
     document.getElementById('previewAssigned').textContent = `Staff: ${appointment.assigned_staff}`;
     document.getElementById('previewNotes').textContent = appointment.notes || 'No notes.';
+
+    const consent = consentRecords[id];
+    const consentStatus = document.getElementById('previewConsentStatus');
+    const consentDetails = document.getElementById('previewConsentDetails');
+    const consentSignature = document.getElementById('previewConsentSignature');
+    consentDetails.classList.toggle('hidden', !consent);
+
+    if (consent) {
+        consentStatus.textContent = 'Signed';
+        consentStatus.className = 'rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200';
+        document.getElementById('previewConsentMeta').textContent = `Signed ${consent.signed_at} for ${consent.service}`;
+        document.getElementById('previewConsentText').textContent = consent.consent_text;
+        consentSignature.src = consent.signature_url;
+    } else {
+        consentStatus.textContent = appointment.requires_consent ? 'Missing' : 'Not required';
+        consentStatus.className = appointment.requires_consent
+            ? 'rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200'
+            : 'rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600';
+        document.getElementById('previewConsentMeta').textContent = appointment.requires_consent
+            ? 'This service requires consent, but no signed record is attached.'
+            : 'Consent is not required for this service.';
+        document.getElementById('previewConsentText').textContent = '';
+        consentSignature.src = '';
+    }
+
     document.getElementById('previewModal').classList.remove('hidden');
     setBodyLock(true);
 }
 
 function closePreviewModal() {
     document.getElementById('previewModal').classList.add('hidden');
+    document.getElementById('previewConsentSignature').src = '';
     setBodyLock(false);
 }
 
@@ -930,7 +1128,11 @@ function openEditAppointmentModal(id) {
     document.getElementById('edit_time').value = appointment.time;
     document.getElementById('edit_status').value = appointment.status;
     document.getElementById('edit_notes').value = appointment.notes || '';
-    document.getElementById('edit_assigned_to').value = appointment.assigned_to || '';
+    const assignedIds = (appointment.assigned_staff_ids || []).map(String);
+    Array.from(document.getElementById('edit_assigned_staff_ids').options).forEach((option) => {
+        option.selected = assignedIds.includes(option.value);
+    });
+    document.getElementById('edit_assigned_staff_ids')._updateStaffPicker?.();
 
     const serviceSelect = document.getElementById('edit_service_id');
     const lockHint = document.getElementById('editServiceLockHint');
@@ -1041,43 +1243,6 @@ function applyFilters() {
 
 document.getElementById('globalSearch')?.addEventListener('input', applyFilters);
 document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
-
-async function updateAppointment(select) {
-    const row = select.closest('.filter-row');
-    const id = select.dataset.id;
-    const status = row?.querySelector('.status-select')?.value;
-    const assignedTo = row?.querySelector('.assign-select')?.value || null;
-
-    if (!id || !status) return;
-
-    try {
-        const response = await fetch(`/appointments/${id}/status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ status, assigned_to: assignedTo })
-        });
-
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Failed to update appointment.');
-        }
-
-        window.location.reload();
-    } catch (error) {
-        showToast(error.message || 'Something went wrong while updating the appointment.');
-        window.location.reload();
-    }
-}
-
-document.addEventListener('change', (event) => {
-    if (event.target.classList.contains('status-select') || event.target.classList.contains('assign-select')) {
-        updateAppointment(event.target);
-    }
-});
 
 document.getElementById('walkInForm')?.addEventListener('submit', async function (event) {
     event.preventDefault();
@@ -1197,7 +1362,6 @@ window.addEventListener('touchend', stopWalkInSignature);
 window.addEventListener('resize', resizeWalkInSignatureCanvas);
 
 setTimeout(() => document.getElementById('pageToast')?.remove(), 4000);
-refreshStaffSelects();
 </script>
 
 @endsection

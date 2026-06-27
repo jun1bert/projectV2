@@ -89,6 +89,7 @@ h1 {
 
                 <input type="text" name="name" value="{{ old('name') }}" placeholder="Full Name" required class="auth-field px-4 py-3 text-sm">
                 <input type="email" name="email" value="{{ old('email') }}" placeholder="Email Address" required class="auth-field px-4 py-3 text-sm">
+                <input type="tel" name="phone" value="{{ old('phone') }}" placeholder="Mobile Number (09XXXXXXXXX)" required class="auth-field px-4 py-3 text-sm">
                 <input type="password" name="password" placeholder="Password" required class="auth-field px-4 py-3 text-sm">
                 <input type="password" name="password_confirmation" placeholder="Confirm Password" required class="auth-field px-4 py-3 text-sm">
 

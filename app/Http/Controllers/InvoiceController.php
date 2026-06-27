@@ -16,9 +16,9 @@ class InvoiceController extends Controller
         $user = Auth::user();
         $isStaffOwner = $user->role === 'staff'
             && $invoice->appointment
-            && $invoice->appointment->assigned_to === $user->id;
+            && $invoice->appointment->assignedStaffMembers()->where('users.id', $user->id)->exists();
 
-        if (!in_array($user->role, ['admin', 'management', 'reception']) && !$isStaffOwner) {
+        if (! in_array($user->role, ['admin', 'management', 'reception']) && ! $isStaffOwner) {
             abort(403);
         }
 

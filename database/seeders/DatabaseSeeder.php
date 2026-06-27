@@ -14,10 +14,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
-            ServiceSeeder::class,
-            AdminUserSeeder::class,
-            // AppointmentSeeder::class,
-        ]);
+        $this->call(AdminUserSeeder::class);
+
+        if (config('app.seed_service_catalog')) {
+            $this->call(ServiceSeeder::class);
+        }
+
+        if (! app()->environment('production') && config('app.seed_demo_data')) {
+            $this->call(AppointmentSeeder::class);
+        }
     }
 }

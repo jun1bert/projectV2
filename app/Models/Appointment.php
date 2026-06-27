@@ -3,9 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
-use App\Models\Service;
-use App\Models\ConsentForm;
 
 class Appointment extends Model
 {
@@ -13,14 +10,13 @@ class Appointment extends Model
         'full_name',
         'contact_number',
         'email',
+        'client_id',
         'service_id',
         'date',
         'time',
         'notes',
         'status',
         'booking_type',
-        'assigned_to',
-        'payment_status',
         'completion_notified_at',
     ];
 
@@ -28,14 +24,32 @@ class Appointment extends Model
         'completion_notified_at' => 'datetime',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATION: ASSIGNED STAFF
-    |--------------------------------------------------------------------------
-    */
-    public function assignedStaff()
+    public function assignedStaffMembers()
     {
-        return $this->belongsTo(User::class, 'assigned_to');
+        return $this->belongsToMany(User::class, 'appointment_staff')->withTimestamps();
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function getAssignedStaffNamesAttribute(): string
+    {
+        $staff = $this->relationLoaded('assignedStaffMembers')
+            ? $this->assignedStaffMembers
+            : $this->assignedStaffMembers()->get();
+
+        return $staff->pluck('name')->join(', ') ?: 'Unassigned';
+    }
+
+    public function getPaymentStatusAttribute(): string
+    {
+        if ($this->relationLoaded('invoice')) {
+            return $this->invoice?->status ?? 'unpaid';
+        }
+
+        return $this->invoice()->value('status') ?? 'unpaid';
     }
 
     /*
@@ -49,9 +63,9 @@ class Appointment extends Model
     }
 
     public function invoice()
-{
-    return $this->hasOne(Invoice::class);
-}
+    {
+        return $this->hasOne(Invoice::class);
+    }
 
     public function consentForm()
     {

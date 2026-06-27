@@ -60,7 +60,7 @@ class AppointmentCompletionNotifier
         $apiKey = config('services.semaphore.key');
         $senderName = config('services.semaphore.sender_name');
 
-        if (!$apiKey) {
+        if (! $apiKey) {
             Log::info('Appointment completion SMS skipped; Semaphore is not configured.', [
                 'appointment_id' => $appointment->id,
                 'contact_number' => $appointment->contact_number,
@@ -85,7 +85,7 @@ class AppointmentCompletionNotifier
                 ->timeout(10)
                 ->post('https://api.semaphore.co/api/v4/messages', $payload);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::warning('Appointment completion SMS failed', [
                     'appointment_id' => $appointment->id,
                     'status' => $response->status(),
@@ -119,7 +119,7 @@ class AppointmentCompletionNotifier
         $digits = preg_replace('/\D+/', '', $number);
 
         if (str_starts_with($digits, '09')) {
-            return '63' . substr($digits, 1);
+            return '63'.substr($digits, 1);
         }
 
         if (str_starts_with($digits, '639')) {

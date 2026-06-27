@@ -51,12 +51,29 @@ it('allows an online client booking to be confirmed by reception', function () {
     $this->actingAs($reception)
         ->postJson(route('appointments.updateStatus', $appointment->id), [
             'status' => 'confirmed',
-            'assigned_to' => null,
+            'assigned_staff_ids' => [],
         ])
         ->assertOk()
         ->assertJson(['success' => true]);
 
     expect($appointment->fresh()->status)->toBe('confirmed');
+});
+
+it('keeps clients with the same name but different contact numbers separate', function () {
+    $service = systemService();
+
+    foreach ([['09170000001', '09:00'], ['09170000002', '09:30']] as [$contact, $time]) {
+        $this->post(route('appointments.store'), [
+            'full_name' => 'Same Name',
+            'contact_number' => $contact,
+            'email' => null,
+            'service_id' => $service->id,
+            'date' => now()->addDay()->toDateString(),
+            'time' => $time,
+        ])->assertRedirect('/#book');
+    }
+
+    expect(Appointment::where('full_name', 'Same Name')->pluck('client_id')->unique()->count())->toBe(2);
 });
 
 it('opens the appointment list without staff service specialization relationships', function () {
@@ -72,7 +89,6 @@ it('opens the appointment list without staff service specialization relationship
         'time' => '09:00',
         'status' => 'confirmed',
         'booking_type' => 'online',
-        'payment_status' => 'unpaid',
     ]);
 
     $this->actingAs($reception)
@@ -81,10 +97,11 @@ it('opens the appointment list without staff service specialization relationship
         ->assertSee('Calendar Client');
 });
 
-it('allows reception to assign a staff member to a confirmed appointment', function () {
+it('allows reception to assign multiple staff members to a confirmed appointment', function () {
     $service = systemService();
     $reception = systemUser('reception');
     $staff = systemUser('staff');
+    $secondStaff = systemUser('staff');
 
     $appointment = Appointment::create([
         'full_name' => 'Assign Client',
@@ -95,18 +112,54 @@ it('allows reception to assign a staff member to a confirmed appointment', funct
         'time' => '10:00',
         'status' => 'confirmed',
         'booking_type' => 'online',
-        'payment_status' => 'unpaid',
     ]);
 
     $this->actingAs($reception)
         ->postJson(route('appointments.updateStatus', $appointment->id), [
             'status' => 'confirmed',
-            'assigned_to' => $staff->id,
+            'assigned_staff_ids' => [$staff->id, $secondStaff->id],
         ])
         ->assertOk()
         ->assertJson(['success' => true]);
 
-    expect($appointment->fresh()->assigned_to)->toBe($staff->id);
+    expect($appointment->fresh()->assignedStaffMembers()->pluck('users.id')->all())
+        ->toEqualCanonicalizing([$staff->id, $secondStaff->id]);
+});
+
+it('prevents staff from viewing or charging appointments assigned to someone else', function () {
+    $service = systemService();
+    $staff = systemUser('staff');
+    $assignedStaff = systemUser('staff');
+    $appointment = Appointment::create([
+        'full_name' => 'Private Client',
+        'contact_number' => '09175550000',
+        'service_id' => $service->id,
+        'date' => now()->toDateString(),
+        'time' => '14:30',
+        'status' => 'completed',
+    ]);
+    $appointment->assignedStaffMembers()->attach($assignedStaff->id);
+
+    $this->actingAs($staff)
+        ->get(route('appointments.index'))
+        ->assertOk()
+        ->assertDontSee('Private Client');
+
+    $this->actingAs($staff)
+        ->postJson(route('appointments.payment.store', $appointment->id), ['method' => 'cash'])
+        ->assertForbidden();
+});
+
+it('does not allow inactive services to be booked', function () {
+    $service = systemService(['is_active' => false]);
+
+    $this->post(route('appointments.store'), [
+        'full_name' => 'Inactive Service Client',
+        'contact_number' => '09176660000',
+        'service_id' => $service->id,
+        'date' => now()->addDay()->toDateString(),
+        'time' => '09:00',
+    ])->assertSessionHasErrors('service_id');
 });
 
 it('allows reception to create a walk-in appointment without staff assignment', function () {
@@ -121,7 +174,7 @@ it('allows reception to create a walk-in appointment without staff assignment', 
             'service_id' => $service->id,
             'date' => now()->toDateString(),
             'time' => '10:30',
-            'assigned_to' => null,
+            'assigned_staff_ids' => [],
         ])
         ->assertOk()
         ->assertJson(['success' => true]);
@@ -131,7 +184,7 @@ it('allows reception to create a walk-in appointment without staff assignment', 
     expect($appointment->status)
         ->toBe('confirmed')
         ->and($appointment->booking_type)->toBe('walk-in')
-        ->and($appointment->assigned_to)->toBeNull();
+        ->and($appointment->assignedStaffMembers()->count())->toBe(0);
 });
 
 it('processes payment and displays receipt for a completed appointment', function () {
@@ -143,13 +196,12 @@ it('processes payment and displays receipt for a completed appointment', functio
         'contact_number' => '09191234567',
         'email' => 'paid@example.com',
         'service_id' => $service->id,
-        'assigned_to' => $staff->id,
         'date' => now()->toDateString(),
         'time' => '13:00',
         'status' => 'completed',
         'booking_type' => 'walk-in',
-        'payment_status' => 'unpaid',
     ]);
+    $appointment->assignedStaffMembers()->attach($staff->id);
 
     $this->actingAs(systemUser('reception'))
         ->postJson(route('appointments.payment.store', $appointment->id), [
@@ -184,7 +236,6 @@ it('allows management to view reports and customer service history', function ()
         'time' => '15:00',
         'status' => 'completed',
         'booking_type' => 'online',
-        'payment_status' => 'paid',
     ]);
 
     $this->actingAs($management)

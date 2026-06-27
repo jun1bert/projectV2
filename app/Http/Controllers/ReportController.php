@@ -3,12 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
-use App\Models\User;
+use App\Models\Invoice;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class ReportController extends Controller
 {
@@ -19,8 +18,8 @@ class ReportController extends Controller
         } catch (\Throwable $e) {
             Log::error('Report page failed', [
                 'message' => $e->getMessage(),
-                'file'    => $e->getFile(),
-                'line'    => $e->getLine(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return back()->with('error', 'Unable to load report. Please try again.');
@@ -37,7 +36,7 @@ class ReportController extends Controller
             'reportType' => $type,
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->download($type . '-report-' . now()->format('Ymd-His') . '.pdf');
+        return $pdf->download($type.'-report-'.now()->format('Ymd-His').'.pdf');
     }
 
     public function customerServices(Request $request)
@@ -46,7 +45,7 @@ class ReportController extends Controller
         $search = trim((string) $request->query('search', ''));
         $status = $request->query('status', 'completed');
 
-        $appointmentsQuery = Appointment::with(['service', 'assignedStaff', 'invoice'])
+        $appointmentsQuery = Appointment::with(['client', 'service', 'assignedStaffMembers', 'invoice'])
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($search !== '', function ($query) use ($search) {
@@ -63,15 +62,16 @@ class ReportController extends Controller
         $appointments = $appointmentsQuery->get();
 
         $customers = $appointments
-            ->groupBy(fn ($appointment) => Str::lower($appointment->full_name) . '|' . $appointment->contact_number)
+            ->groupBy(fn ($appointment) => $appointment->client_id ?? 'appointment:'.$appointment->id)
             ->map(function ($customerAppointments) {
                 $first = $customerAppointments->first();
-                $totalSpent = $customerAppointments->sum(fn ($appointment) => (float) ($appointment->service->price ?? 0));
+                $client = $first->client;
+                $totalSpent = $customerAppointments->sum(fn ($appointment) => (float) ($appointment->invoice?->grand_total ?? 0));
 
                 return [
-                    'name' => $first->full_name,
-                    'contact' => $first->contact_number,
-                    'email' => $first->email,
+                    'name' => $client?->full_name ?? $first->full_name,
+                    'contact' => $client?->contact_number ?? $first->contact_number,
+                    'email' => $client?->email ?? $first->email,
                     'visits' => $customerAppointments->count(),
                     'total_spent' => $totalSpent,
                     'last_visit' => optional($customerAppointments->sortByDesc('date')->first())->date,
@@ -94,11 +94,11 @@ class ReportController extends Controller
                         'date' => $appointment->date,
                         'time' => $appointment->time,
                         'service' => $appointment->service->name ?? 'No service',
-                        'staff' => $appointment->assignedStaff->name ?? 'Unassigned',
+                        'staff' => $appointment->assigned_staff_names,
                         'status' => $appointment->status,
                         'payment_status' => $appointment->payment_status ?? 'unpaid',
                         'booking_type' => $appointment->booking_type ?? 'online',
-                        'amount' => (float) ($appointment->service->price ?? 0),
+                        'amount' => (float) ($appointment->invoice?->grand_total ?? $appointment->service?->price ?? 0),
                         'receipt_url' => $appointment->invoice
                             ? route('invoices.receipt', $appointment->invoice->id)
                             : null,
@@ -112,7 +112,7 @@ class ReportController extends Controller
             'customerTransactions' => $customerTransactions,
             'totalCustomers' => $customers->count(),
             'totalServices' => $appointments->count(),
-            'totalRevenue' => $appointments->sum(fn ($appointment) => (float) ($appointment->service->price ?? 0)),
+            'totalRevenue' => $appointments->sum(fn ($appointment) => (float) ($appointment->invoice?->grand_total ?? 0)),
             'range' => $range,
             'from' => $from,
             'to' => $to,
@@ -136,10 +136,10 @@ class ReportController extends Controller
         $pending = (clone $appointmentsQuery)->where('status', 'pending')->count();
         $confirmed = (clone $appointmentsQuery)->where('status', 'confirmed')->count();
 
-        $totalRevenue = Appointment::whereBetween('appointments.date', [$dateFrom, $dateTo])
-            ->where('appointments.status', 'completed')
-            ->join('services', 'appointments.service_id', '=', 'services.id')
-            ->sum('services.price');
+        $totalRevenue = Invoice::query()
+            ->where('status', 'paid')
+            ->whereHas('appointment', fn ($query) => $query->whereBetween('date', [$dateFrom, $dateTo]))
+            ->sum('grand_total');
 
         $topServices = Appointment::selectRaw('service_id, COUNT(*) as total')
             ->whereBetween('date', [$dateFrom, $dateTo])
@@ -149,39 +149,35 @@ class ReportController extends Controller
             ->limit(10)
             ->get();
 
-        $appointments = Appointment::with(['service', 'assignedStaff', 'invoice'])
+        $appointments = Appointment::with(['client', 'service', 'assignedStaffMembers', 'invoice'])
             ->whereBetween('date', [$dateFrom, $dateTo])
             ->orderBy('date')
             ->orderBy('time')
             ->get();
 
-        $clientEmails = User::query()
-            ->whereIn('name', $appointments->pluck('full_name')->filter()->unique())
-            ->pluck('email', 'name');
-
         $salesRows = $appointments
             ->where('status', 'completed')
-            ->map(function ($appointment) use ($clientEmails) {
-                $appointment->client_email = $appointment->email ?: ($clientEmails[$appointment->full_name] ?? null);
+            ->map(function ($appointment) {
+                $appointment->client_email = $appointment->email ?: $appointment->client?->email;
 
                 return $appointment;
             })
             ->values();
 
         $clientRows = $appointments
-            ->groupBy(fn ($appointment) => Str::lower($appointment->full_name) . '|' . $appointment->contact_number)
-            ->map(function ($clientAppointments) use ($clientEmails) {
+            ->groupBy(fn ($appointment) => $appointment->client_id ?? 'appointment:'.$appointment->id)
+            ->map(function ($clientAppointments) {
                 $first = $clientAppointments->first();
+                $client = $first->client;
 
                 return [
-                    'name' => $first->full_name,
-                    'contact' => $first->contact_number,
-                    'email' => $first->email ?: ($clientEmails[$first->full_name] ?? null),
+                    'name' => $client?->full_name ?? $first->full_name,
+                    'contact' => $client?->contact_number ?? $first->contact_number,
+                    'email' => $client?->email ?? $first->email,
                     'visits' => $clientAppointments->count(),
                     'last_visit' => optional($clientAppointments->sortByDesc('date')->first())->date,
                     'total_spent' => $clientAppointments
-                        ->where('status', 'completed')
-                        ->sum(fn ($appointment) => (float) ($appointment->service->price ?? 0)),
+                        ->sum(fn ($appointment) => (float) ($appointment->invoice?->grand_total ?? 0)),
                 ];
             })
             ->sortBy('name')

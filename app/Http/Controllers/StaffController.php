@@ -45,15 +45,15 @@ class StaffController extends Controller
 
         $request->validate([
             'name' => 'required',
-            'email' => 'required|email|unique:users,email,' . $id,
+            'email' => 'required|email|unique:users,email,'.$id,
             'role' => ['required', Rule::in(self::ROLES)],
             'password' => 'nullable|min:6',
         ]);
 
         $data = [
-            'name'  => $request->name,
+            'name' => $request->name,
             'email' => $request->email,
-            'role'  => $request->role,
+            'role' => $request->role,
         ];
 
         if ($request->filled('password')) {

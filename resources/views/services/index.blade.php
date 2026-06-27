@@ -64,6 +64,9 @@
                 @if($service->requires_consent)
                 <span class="rounded-full bg-[rgba(164,141,120,.14)] px-2 py-0.5 text-xs font-semibold text-[var(--ink)]">Consent required</span>
                 @endif
+                <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ $service->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600' }}">
+                    {{ $service->is_active ? 'Active' : 'Inactive' }}
+                </span>
             </div>
 
             @if($service->description)
@@ -178,6 +181,11 @@
                     Require client consent and signature
                 </label>
 
+                <label class="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
+                    <input id="edit_is_active" type="checkbox" name="is_active" value="1" class="h-4 w-4 rounded accent-[var(--desert-rock)]">
+                    Available for new bookings
+                </label>
+
                 <div class="grid gap-2 pt-2 sm:grid-cols-2">
                     <button type="button" class="muted-button rounded-xl px-4 py-2.5 text-sm font-semibold" onclick="closeEditModal()">Cancel</button>
                     <button type="submit" class="theme-button rounded-xl px-4 py-2.5 text-sm font-semibold transition">Update Service</button>
@@ -193,7 +201,7 @@
 
         <div class="theme-card relative w-full max-w-sm rounded-2xl p-5">
             <h2 class="text-lg font-semibold text-[var(--ink)]">Delete Service?</h2>
-            <p class="mt-1 text-sm text-[var(--muted)]">This action cannot be undone.</p>
+            <p class="mt-1 text-sm text-[var(--muted)]">Only services without appointment history can be deleted.</p>
 
             <div class="mt-5 grid gap-2 sm:grid-cols-2">
                 <button type="button" class="muted-button rounded-xl px-4 py-2.5 text-sm font-semibold" onclick="closeDeleteModal()">Cancel</button>
@@ -221,6 +229,7 @@ function openEditModal(service) {
     document.getElementById('edit_duration').value = service.duration;
     document.getElementById('edit_description').value = service.description ?? '';
     document.getElementById('edit_requires_consent').checked = Boolean(service.requires_consent);
+    document.getElementById('edit_is_active').checked = Boolean(service.is_active);
 }
 
 function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); lockBody(false); }

@@ -153,7 +153,7 @@
                         <tr>
                             <td class="px-5 py-3 font-medium text-[var(--ink)]">{{ $appointment->service->name ?? 'No service' }}</td>
                             <td class="px-5 py-3 text-[var(--muted)]">{{ $appointment->date }} at {{ $appointment->time }}</td>
-                            <td class="px-5 py-3 text-[var(--muted)]">{{ $appointment->assignedStaff->name ?? 'Unassigned' }}</td>
+                            <td class="px-5 py-3 text-[var(--muted)]">{{ $appointment->assigned_staff_names }}</td>
                             <td class="px-5 py-3">
                                 <span class="rounded-full bg-[rgba(230,218,200,.5)] px-2.5 py-1 text-xs font-semibold capitalize text-[var(--ink)]">
                                     {{ $appointment->status }}
@@ -176,7 +176,7 @@
                         </div>
                         <span class="text-right text-sm font-semibold text-[var(--desert-rock)]">PHP {{ number_format($appointment->service->price ?? 0, 2) }}</span>
                     </div>
-                    <p class="mt-2 text-xs text-[var(--muted)]">Staff: {{ $appointment->assignedStaff->name ?? 'Unassigned' }}</p>
+                    <p class="mt-2 text-xs text-[var(--muted)]">Staff: {{ $appointment->assigned_staff_names }}</p>
                     <span class="mt-3 inline-flex rounded-full bg-[rgba(230,218,200,.5)] px-2.5 py-1 text-xs font-semibold capitalize text-[var(--ink)]">
                         {{ $appointment->status }}
                     </span>

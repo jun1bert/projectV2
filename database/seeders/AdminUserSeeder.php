@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
@@ -18,19 +18,28 @@ class AdminUserSeeder extends Seeder
 
         $password = Hash::make($defaultPassword ?: 'password123');
 
-        User::updateOrCreate(
-            ['email' => 'admin@spa.com'],
-            [
-                'name' => 'System Admin',
-                'password' => $password,
-                'role' => 'admin',
-            ]
-        );
+        $adminIdentity = ['email' => env('SEED_ADMIN_EMAIL', 'admin@spa.com')];
+        $adminData = [
+            'name' => env('SEED_ADMIN_NAME', 'System Admin'),
+            'password' => $password,
+            'role' => 'admin',
+        ];
+
+        if (app()->environment('production')) {
+            User::firstOrCreate($adminIdentity, $adminData);
+        } else {
+            User::updateOrCreate($adminIdentity, $adminData);
+        }
+
+        if (app()->environment('production')) {
+            return;
+        }
 
         User::updateOrCreate(
             ['email' => 'manager@spa.com'],
             [
                 'name' => 'Spa Manager',
+                'phone' => '09170000001',
                 'password' => $password,
                 'role' => 'management',
             ]
@@ -40,6 +49,7 @@ class AdminUserSeeder extends Seeder
             ['email' => 'staff1@spa.com'],
             [
                 'name' => 'Alyssa Cruz',
+                'phone' => '09170000002',
                 'password' => $password,
                 'role' => 'staff',
             ]
@@ -49,6 +59,7 @@ class AdminUserSeeder extends Seeder
             ['email' => 'staff2@spa.com'],
             [
                 'name' => 'Mika Santos',
+                'phone' => '09170000003',
                 'password' => $password,
                 'role' => 'staff',
             ]
@@ -58,6 +69,7 @@ class AdminUserSeeder extends Seeder
             ['email' => 'reception@spa.com'],
             [
                 'name' => 'Reception Desk',
+                'phone' => '09170000004',
                 'password' => $password,
                 'role' => 'reception',
             ]
