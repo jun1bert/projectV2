@@ -69,10 +69,23 @@
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
     @forelse($images as $image)
     <article class="theme-card overflow-hidden rounded-2xl">
+        @php
+            $imageUrl = $image->url;
+        @endphp
         <div class="relative">
-            <img src="{{ Storage::url($image->path) }}"
-                 alt="{{ $image->title ?? 'Gallery image' }}"
-                 class="aspect-square w-full object-cover">
+            @if($image->exists_on_disk)
+                <img src="{{ $imageUrl }}"
+                     alt="{{ $image->title ?? 'Gallery image' }}"
+                     loading="lazy"
+                     class="aspect-square w-full object-cover">
+            @else
+                <div class="grid aspect-square w-full place-items-center bg-[var(--creamed-oat)]/70 p-6 text-center">
+                    <div>
+                        <p class="text-sm font-semibold text-[var(--ink)]">Image file missing</p>
+                        <p class="mt-2 break-all text-xs leading-5 text-[var(--muted)]">{{ $image->path }}</p>
+                    </div>
+                </div>
+            @endif
 
             <span class="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-semibold ring-1
                          {{ $image->is_published ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-stone-900/70 text-white ring-white/20' }}">
@@ -201,14 +214,17 @@ function previewImages(event) {
     preview.innerHTML = '';
 
     Array.from(event.target.files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (readerEvent) => {
-            const img = document.createElement('img');
-            img.src = readerEvent.target.result;
-            img.className = 'aspect-square w-full rounded-xl border border-[rgba(164,141,120,.18)] object-cover';
-            preview.appendChild(img);
-        };
-        reader.readAsDataURL(file);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'overflow-hidden rounded-xl border border-[rgba(164,141,120,.18)] bg-[var(--creamed-oat)]/40';
+
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.alt = file.name;
+        img.onload = () => URL.revokeObjectURL(img.src);
+        img.className = 'aspect-square w-full object-cover';
+
+        wrapper.appendChild(img);
+        preview.appendChild(wrapper);
     });
 }
 </script>

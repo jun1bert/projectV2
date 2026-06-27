@@ -23,6 +23,11 @@ class GalleryImage extends Model
 
     public function getUrlAttribute(): string
     {
-        return Storage::url($this->path);
+        return asset(Storage::url($this->path));
+    }
+
+    public function getExistsOnDiskAttribute(): bool
+    {
+        return Storage::disk('public')->exists($this->path);
     }
 }

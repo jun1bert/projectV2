@@ -19,4 +19,5 @@ class Service extends Model
         'requires_consent' => 'boolean',
         'is_active' => 'boolean',
     ];
+
 }

@@ -16,6 +16,7 @@ class ServiceSeeder extends Seeder
                 'duration' => 60,
                 'description' => 'Relaxing full-body massage therapy.',
                 'is_active' => 1,
+                'requires_consent' => 0,
             ],
             [
                 'name' => 'Swedish Massage',
@@ -23,6 +24,7 @@ class ServiceSeeder extends Seeder
                 'duration' => 90,
                 'description' => 'Gentle massage to promote relaxation and circulation.',
                 'is_active' => 1,
+                'requires_consent' => 0,
             ],
             [
                 'name' => 'Deep Tissue Massage',
@@ -30,6 +32,7 @@ class ServiceSeeder extends Seeder
                 'duration' => 90,
                 'description' => 'Targets deeper muscle layers and chronic tension.',
                 'is_active' => 1,
+                'requires_consent' => 0,
             ],
             [
                 'name' => 'Hot Stone Therapy',
@@ -37,6 +40,7 @@ class ServiceSeeder extends Seeder
                 'duration' => 90,
                 'description' => 'Warm stones used to relax muscles and improve circulation.',
                 'is_active' => 1,
+                'requires_consent' => 0,
             ],
             [
                 'name' => 'Aromatherapy Massage',
@@ -44,6 +48,7 @@ class ServiceSeeder extends Seeder
                 'duration' => 75,
                 'description' => 'Massage combined with essential oils for relaxation.',
                 'is_active' => 1,
+                'requires_consent' => 0,
             ],
             [
                 'name' => 'Foot Reflexology',
@@ -51,6 +56,7 @@ class ServiceSeeder extends Seeder
                 'duration' => 45,
                 'description' => 'Pressure-point foot therapy for overall wellness.',
                 'is_active' => 1,
+                'requires_consent' => 0,
             ],
             [
                 'name' => 'Prenatal Massage',
@@ -58,6 +64,7 @@ class ServiceSeeder extends Seeder
                 'duration' => 60,
                 'description' => 'Specialized massage for expecting mothers.',
                 'is_active' => 1,
+                'requires_consent' => 1,
             ],
             [
                 'name' => 'Sports Massage',
@@ -65,6 +72,7 @@ class ServiceSeeder extends Seeder
                 'duration' => 60,
                 'description' => 'Designed for athletes and active individuals.',
                 'is_active' => 1,
+                'requires_consent' => 1,
             ],
             [
                 'name' => 'Back and Shoulder Massage',
@@ -72,18 +80,23 @@ class ServiceSeeder extends Seeder
                 'duration' => 30,
                 'description' => 'Focused treatment for upper body tension.',
                 'is_active' => 1,
+                'requires_consent' => 0,
             ],
             [
                 'name' => 'Couples Massage',
                 'price' => 2200,
                 'duration' => 60,
                 'description' => 'Relaxing massage experience for two people.',
-                'is_active' => 0, // inactive sample
+                'is_active' => 0,
+                'requires_consent' => 0,
             ],
         ];
 
         foreach ($services as $service) {
-            Service::create($service);
+            Service::updateOrCreate(
+                ['name' => $service['name']],
+                $service
+            );
         }
     }
 }

@@ -27,7 +27,7 @@ class StaffController extends Controller
             'role' => ['required', Rule::in(self::ROLES)],
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,

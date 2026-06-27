@@ -39,7 +39,7 @@ class AdminUserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'staff1@spa.com'],
             [
-                'name' => 'Staff Member 1',
+                'name' => 'Alyssa Cruz',
                 'password' => $password,
                 'role' => 'staff',
             ]
@@ -48,7 +48,7 @@ class AdminUserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'staff2@spa.com'],
             [
-                'name' => 'Staff Member 2',
+                'name' => 'Mika Santos',
                 'password' => $password,
                 'role' => 'staff',
             ]

@@ -2,15 +2,17 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Appointment;
 use App\Models\Service;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class AppointmentSeeder extends Seeder
 {
     public function run(): void
     {
-        $services = Service::all();
+        $services = Service::where('is_active', true)->get()->keyBy('name');
+        $staff = User::where('role', 'staff')->get()->keyBy('email');
 
         if ($services->isEmpty()) {
             return;
@@ -18,76 +20,109 @@ class AppointmentSeeder extends Seeder
 
         $appointments = [
             [
-                'full_name' => 'John Garcia',
-                'contact_number' => '09830133744',
-                'date' => '2026-06-23',
-                'time' => '13:00',
-                'notes' => 'Auto-generated test booking',
-                'status' => 'confirmed',
-            ],
-            [
                 'full_name' => 'Maria Santos',
                 'contact_number' => '09171234567',
-                'date' => '2026-06-24',
+                'email' => 'maria.santos@example.com',
+                'service' => 'Swedish Massage',
+                'date' => now()->toDateString(),
                 'time' => '09:00',
-                'notes' => 'Consultation appointment',
-                'status' => 'pending',
+                'notes' => 'Online booking. Prefers a quiet room.',
+                'status' => 'confirmed',
+                'booking_type' => 'online',
+                'assigned_staff_email' => 'staff1@spa.com',
+                'payment_status' => 'unpaid',
             ],
             [
                 'full_name' => 'Pedro Reyes',
                 'contact_number' => '09281234567',
-                'date' => '2026-06-24',
+                'email' => null,
+                'service' => 'Foot Reflexology',
+                'date' => now()->toDateString(),
                 'time' => '10:30',
-                'notes' => 'Follow-up session',
+                'notes' => 'Walk-in client requested available wellness staff.',
                 'status' => 'confirmed',
+                'booking_type' => 'walk-in',
+                'assigned_staff_email' => 'staff2@spa.com',
+                'payment_status' => 'unpaid',
             ],
             [
                 'full_name' => 'Ana Cruz',
                 'contact_number' => '09351234567',
-                'date' => '2026-06-25',
+                'email' => 'ana.cruz@example.com',
+                'service' => 'Back and Shoulder Massage',
+                'date' => now()->subDay()->toDateString(),
                 'time' => '14:00',
-                'notes' => 'First-time client',
+                'notes' => 'Completed sample with paid receipt flow.',
                 'status' => 'completed',
+                'booking_type' => 'walk-in',
+                'assigned_staff_email' => 'staff1@spa.com',
+                'payment_status' => 'paid',
             ],
             [
                 'full_name' => 'Mark Dela Rosa',
                 'contact_number' => '09461234567',
-                'date' => '2026-06-25',
+                'email' => 'mark.delarosa@example.com',
+                'service' => 'Deep Tissue Massage',
+                'date' => now()->addDay()->toDateString(),
                 'time' => '15:30',
-                'notes' => 'Requested afternoon schedule',
+                'notes' => 'Client called to cancel.',
                 'status' => 'cancelled',
+                'booking_type' => 'online',
+                'assigned_staff_email' => null,
+                'payment_status' => 'unpaid',
             ],
             [
                 'full_name' => 'Sarah Mendoza',
                 'contact_number' => '09571234567',
-                'date' => '2026-06-26',
-                'time' => '08:30',
-                'notes' => 'Priority booking',
-                'status' => 'confirmed',
-            ],
-            [
-                'full_name' => 'James Villanueva',
-                'contact_number' => '09681234567',
-                'date' => '2026-06-26',
+                'email' => 'sarah.mendoza@example.com',
+                'service' => 'Prenatal Massage',
+                'date' => now()->addDay()->toDateString(),
                 'time' => '11:00',
-                'notes' => 'Walk-in converted to appointment',
-                'status' => 'pending',
+                'notes' => 'Confirmed but intentionally unassigned for reception review.',
+                'status' => 'confirmed',
+                'booking_type' => 'online',
+                'assigned_staff_email' => null,
+                'payment_status' => 'unpaid',
             ],
             [
                 'full_name' => 'Christine Lopez',
                 'contact_number' => '09791234567',
-                'date' => '2026-06-27',
+                'email' => null,
+                'service' => 'Aromatherapy Massage',
+                'date' => now()->addDays(2)->toDateString(),
                 'time' => '16:00',
-                'notes' => 'Requested reminder call',
-                'status' => 'confirmed',
+                'notes' => 'Pending online request.',
+                'status' => 'pending',
+                'booking_type' => 'online',
+                'assigned_staff_email' => null,
+                'payment_status' => 'unpaid',
             ],
         ];
 
         foreach ($appointments as $appointment) {
-            Appointment::create([
-                ...$appointment,
-                'service_id' => $services->random()->id,
-            ]);
+            $service = $services[$appointment['service']] ?? $services->first();
+            $assignedStaff = $appointment['assigned_staff_email']
+                ? ($staff[$appointment['assigned_staff_email']] ?? null)
+                : null;
+
+            Appointment::updateOrCreate(
+                [
+                    'contact_number' => $appointment['contact_number'],
+                    'date' => $appointment['date'],
+                    'time' => $appointment['time'],
+                ],
+                [
+                    'full_name' => $appointment['full_name'],
+                    'email' => $appointment['email'],
+                    'service_id' => $service->id,
+                    'notes' => $appointment['notes'],
+                    'status' => $appointment['status'],
+                    'booking_type' => $appointment['booking_type'],
+                    'assigned_to' => $assignedStaff?->id,
+                    'payment_status' => $appointment['payment_status'],
+                    'completion_notified_at' => null,
+                ]
+            );
         }
     }
 }

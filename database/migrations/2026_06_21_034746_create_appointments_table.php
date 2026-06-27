@@ -30,7 +30,7 @@ return new class extends Migration {
 
             $table->string('status')->default('pending');
             $table->string('payment_status')->default('unpaid');
-            $table->string('booking_type')->nullable();
+            $table->string('booking_type')->default('online');
 
             $table->timestamps();
         });

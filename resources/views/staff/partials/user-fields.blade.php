@@ -40,6 +40,7 @@
     <label class="mb-1.5 block text-xs font-bold text-[var(--muted)]">Role</label>
     <select name="role"
             @if($isEdit) id="edit_role" @endif
+            data-role-select
             required
             class="theme-field w-full rounded-xl px-3 py-2.5 text-sm">
         @foreach($roles as $value => $label)

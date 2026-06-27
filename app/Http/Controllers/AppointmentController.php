@@ -16,6 +16,25 @@ use Illuminate\Support\Facades\Storage;
 class AppointmentController extends Controller
 {
     private const DAILY_CONFIRMED_LIMIT = 10;
+    private const ONLINE_TIME_SLOTS = [
+        '09:00',
+        '09:30',
+        '10:00',
+        '10:30',
+        '11:00',
+        '11:30',
+        '12:00',
+        '12:30',
+        '13:00',
+        '13:30',
+        '14:00',
+        '14:30',
+        '15:00',
+        '15:30',
+        '16:00',
+        '16:30',
+        '17:00',
+    ];
 
     /*
     |--------------------------------------------------------------------------
@@ -36,6 +55,7 @@ class AppointmentController extends Controller
             'date'           => 'required|date|after_or_equal:today',
             'time'           => 'required|date_format:H:i',
             'notes'          => 'nullable|string|max:1000',
+            'consent_accepted' => 'nullable|boolean',
             'consent_signature' => 'nullable|string',
         ], [
             'contact_number.regex' => 'Please enter a valid PH mobile number, for example 09171234567.',
@@ -43,6 +63,12 @@ class AppointmentController extends Controller
         ]);
 
         $service = Service::findOrFail($validated['service_id']);
+        if ($service->requires_consent && empty($validated['consent_accepted'])) {
+            return back()
+                ->withInput()
+                ->withErrors(['consent_accepted' => 'Please read and accept the consent form for this service.']);
+        }
+
         if ($service->requires_consent && empty($validated['consent_signature'])) {
             return back()
                 ->withInput()
@@ -55,6 +81,12 @@ class AppointmentController extends Controller
                 ->withErrors([
                     'date' => 'We are fully booked for that date. Please try again tomorrow, choose another date, or try walk-in.',
                 ]);
+        }
+
+        if (!in_array($validated['time'], self::ONLINE_TIME_SLOTS, true)) {
+            return back()
+                ->withInput()
+                ->withErrors(['time' => 'Please choose one of the available online appointment times.']);
         }
 
         DB::transaction(function () use ($validated, $service) {
@@ -109,7 +141,7 @@ class AppointmentController extends Controller
         }
 
         $appointments = Appointment::with(['service', 'assignedStaff', 'invoice', 'consentForm'])->latest()->paginate(8);
-        $staff        = User::where('role', 'staff')->get();
+        $staff        = User::where('role', 'staff')->orderBy('name')->get();
         $services     = Service::all();
         $consentRecords = $appointments->getCollection()
             ->filter(fn ($appointment) => $appointment->consentForm)
@@ -134,7 +166,7 @@ class AppointmentController extends Controller
                 'service_name' => $appointment->service->name ?? 'No service',
                 'service_price' => (float) ($appointment->service->price ?? 0),
                 'date' => $appointment->date,
-                'time' => $appointment->time,
+                'time' => substr((string) $appointment->time, 0, 5),
                 'notes' => $appointment->notes,
                 'status' => $appointment->status,
                 'booking_type' => $appointment->booking_type ?? 'online',
@@ -176,17 +208,8 @@ class AppointmentController extends Controller
             'contact_number.regex' => 'Please enter a valid PH mobile number, for example 09171234567.',
         ]);
 
-        if ($request->filled('assigned_to')) {
-            $isStaff = User::where('id', $request->assigned_to)
-                ->where('role', 'staff')
-                ->exists();
-
-            if (!$isStaff) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Selected user is not a staff member.',
-                ], 422);
-            }
+        if ($request->filled('assigned_to') && !$this->isStaffMember((int) $request->assigned_to)) {
+            return response()->json(['success' => false, 'message' => 'Selected user is not a staff member.'], 422);
         }
 
         try {
@@ -272,18 +295,8 @@ class AppointmentController extends Controller
             'assigned_to' => 'nullable|exists:users,id',
         ]);
 
-        // Validate that assigned_to is actually a staff member
-        if ($request->filled('assigned_to')) {
-            $isStaff = User::where('id', $request->assigned_to)
-                ->where('role', 'staff')
-                ->exists();
-
-            if (!$isStaff) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Selected user is not a staff member.',
-                ], 422);
-            }
+        if ($request->filled('assigned_to') && !$this->isStaffMember((int) $request->assigned_to)) {
+            return response()->json(['success' => false, 'message' => 'Selected user is not a staff member.'], 422);
         }
 
         try {
@@ -409,6 +422,7 @@ class AppointmentController extends Controller
             'date'           => 'required|date|after_or_equal:today',
             'time'           => 'required|date_format:H:i',
             'assigned_to'    => 'nullable|exists:users,id',
+            'consent_accepted' => 'nullable|boolean',
             'consent_signature' => 'nullable|string',
         ], [
             'contact_number.regex' => 'Please enter a valid PH mobile number, for example 09171234567.',
@@ -416,6 +430,13 @@ class AppointmentController extends Controller
         ]);
 
         $service = Service::findOrFail($validated['service_id']);
+        if ($service->requires_consent && empty($validated['consent_accepted'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please ask the client to read and accept the consent form for this service.',
+            ], 422);
+        }
+
         if ($service->requires_consent && empty($validated['consent_signature'])) {
             return response()->json([
                 'success' => false,
@@ -423,17 +444,8 @@ class AppointmentController extends Controller
             ], 422);
         }
 
-        if ($request->filled('assigned_to')) {
-            $isStaff = User::where('id', $request->assigned_to)
-                ->where('role', 'staff')
-                ->exists();
-
-            if (!$isStaff) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Selected user is not a staff member.',
-                ], 422);
-            }
+        if ($request->filled('assigned_to') && !$this->isStaffMember((int) $request->assigned_to)) {
+            return response()->json(['success' => false, 'message' => 'Selected user is not a staff member.'], 422);
         }
 
         try {
@@ -503,6 +515,11 @@ class AppointmentController extends Controller
             ->count();
     }
 
+    private function isStaffMember(int $userId): bool
+    {
+        return User::where('id', $userId)->where('role', 'staff')->exists();
+    }
+
     private function storeConsentIfRequired(Appointment $appointment, Service $service, ?string $signatureData): void
     {
         if (!$service->requires_consent) {
@@ -535,6 +552,13 @@ class AppointmentController extends Controller
 
     private function consentText(Service $service): string
     {
-        return "I confirm that I voluntarily request {$service->name}. I understand the nature of the service, have disclosed relevant health concerns, and consent to receive this service from Martinis and Manicures.";
+        return implode("\n", [
+            "Consent for {$service->name}:",
+            'I voluntarily request the selected service.',
+            'I have disclosed relevant allergies, health conditions, medications, pregnancy, or skin and nail concerns.',
+            'I understand the service has been explained to me and I may ask questions or stop the service at any time.',
+            'I agree to follow the aftercare guidance provided by Martinis and Manicures.',
+            'I have read and agree to these statements.',
+        ]);
     }
 }

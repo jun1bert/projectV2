@@ -55,6 +55,23 @@
         background: #fff;
     }
 
+    input.theme-field[type="date"],
+    input.theme-field[type="time"],
+    select.theme-field {
+        color: var(--ink);
+        color-scheme: light;
+        min-height: 42px;
+        -webkit-text-fill-color: var(--ink);
+        appearance: auto;
+        -webkit-appearance: auto;
+    }
+
+    input.theme-field[type="date"]::-webkit-date-and-time-value,
+    input.theme-field[type="time"]::-webkit-date-and-time-value {
+        color: var(--ink);
+        text-align: left;
+    }
+
     .theme-button {
         background: var(--desert-rock);
         color: #fff;
@@ -245,7 +262,7 @@
                             </select>
 
                             @if($canAssign)
-                            <select class="assign-select theme-field w-auto px-3 py-2 text-xs" data-id="{{ $appointment->id }}">
+                            <select class="assign-select theme-field w-auto px-3 py-2 text-xs" data-id="{{ $appointment->id }}" data-service-id="{{ $appointment->service_id }}">
                                 <option value="">Unassigned</option>
                                 @foreach($staff ?? [] as $member)
                                 <option value="{{ $member->id }}" @selected($appointment->assigned_to == $member->id)>{{ $member->name }}</option>
@@ -261,6 +278,8 @@
                             </button>
                             @elseif($appointment->status === 'completed' && ($appointment->payment_status ?? null) === 'paid' && ($appointment->invoice ?? null))
                             <a href="{{ route('invoices.receipt', $appointment->invoice->id) }}"
+                               target="_blank"
+                               rel="noopener"
                                class="muted-button rounded-xl px-3 py-2 text-xs font-semibold transition">
                                 Receipt
                             </a>
@@ -362,7 +381,7 @@
                 </select>
 
                 @if($canAssign)
-                <select class="assign-select theme-field px-3 py-2.5 text-xs" data-id="{{ $appointment->id }}">
+                <select class="assign-select theme-field px-3 py-2.5 text-xs" data-id="{{ $appointment->id }}" data-service-id="{{ $appointment->service_id }}">
                     <option value="">Unassigned</option>
                     @foreach($staff ?? [] as $member)
                     <option value="{{ $member->id }}" @selected($appointment->assigned_to == $member->id)>{{ $member->name }}</option>
@@ -378,6 +397,8 @@
                 </button>
                 @elseif($appointment->status === 'completed' && ($appointment->payment_status ?? null) === 'paid' && ($appointment->invoice ?? null))
                 <a href="{{ route('invoices.receipt', $appointment->invoice->id) }}"
+                   target="_blank"
+                   rel="noopener"
                    class="muted-button rounded-xl px-3 py-2.5 text-center text-xs font-semibold transition">
                     Receipt
                 </a>
@@ -452,7 +473,11 @@
                     <select id="walkInService" name="service_id" class="theme-field px-3 py-2.5" required>
                         <option value="">Select a service</option>
                         @foreach($services ?? [] as $service)
-                        <option value="{{ $service->id }}" data-requires-consent="{{ $service->requires_consent ? '1' : '0' }}">{{ $service->name }}</option>
+                        <option value="{{ $service->id }}"
+                                data-requires-consent="{{ $service->requires_consent ? '1' : '0' }}"
+                                data-duration="{{ $service->duration ?: 30 }}">
+                            {{ $service->name }}
+                        </option>
                         @endforeach
                     </select>
                 </div>
@@ -471,7 +496,7 @@
                 @if($canAssign)
                 <div>
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Assign staff</label>
-                    <select name="assigned_to" class="theme-field px-3 py-2.5">
+                    <select id="walkInAssignedTo" name="assigned_to" class="theme-field px-3 py-2.5">
                         <option value="">Unassigned</option>
                         @foreach($staff ?? [] as $member)
                         <option value="{{ $member->id }}">{{ $member->name }}</option>
@@ -480,20 +505,15 @@
                 </div>
                 @endif
 
-                <div id="walkInConsentSection" class="hidden rounded-2xl border border-[rgba(164,141,120,.22)] bg-[rgba(250,249,246,.8)] p-4">
-                    <h3 class="text-sm font-semibold text-[var(--ink)]">Client Consent</h3>
-                    <p class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
-                        I voluntarily request this service. I understand the nature of the service, have disclosed relevant health concerns, and consent to receive this service from Martinis and Manicures.
-                    </p>
-                    <div class="mt-3 rounded-xl border border-[rgba(164,141,120,.22)] bg-white p-2">
-                        <canvas id="walkInSignatureCanvas" class="h-36 w-full touch-none rounded-lg bg-white"></canvas>
-                    </div>
-                    <input type="hidden" id="walkInConsentSignature" name="consent_signature">
-                    <div class="mt-2 flex items-center justify-between gap-3">
-                        <p id="walkInConsentHint" class="text-xs text-amber-700"></p>
-                        <button type="button" onclick="clearWalkInSignature()" class="text-xs font-semibold text-[var(--desert-rock)]">Clear signature</button>
-                    </div>
-                </div>
+                <x-consent-form
+                    section-id="walkInConsentSection"
+                    canvas-id="walkInSignatureCanvas"
+                    signature-input-id="walkInConsentSignature"
+                    accepted-input-id="walkInConsentAccepted"
+                    hint-id="walkInConsentHint"
+                    clear-function="clearWalkInSignature"
+                    :compact="true"
+                />
 
                 <div class="grid gap-2 pt-2 sm:grid-cols-2">
                     <button type="button" class="muted-button rounded-xl px-4 py-2.5 text-sm font-semibold" onclick="closeWalkIn()">Cancel</button>
@@ -587,7 +607,7 @@
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Service</label>
                     <select id="edit_service_id" name="service_id" class="theme-field px-3 py-2.5" required>
                         @foreach($services ?? [] as $service)
-                        <option value="{{ $service->id }}">{{ $service->name }}</option>
+                        <option value="{{ $service->id }}" data-duration="{{ $service->duration ?: 30 }}">{{ $service->name }}</option>
                         @endforeach
                     </select>
                     <p id="editServiceLockHint" class="mt-1 hidden text-xs text-amber-700">Service cannot be changed after payment.</p>
@@ -735,6 +755,38 @@ const consentRecords = @json($consentRecords);
 const appointmentRecords = @json($appointmentRecords);
 let currentServicePrice = 0;
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+    }[char]));
+}
+
+function showToast(message, type = 'error') {
+    document.getElementById('pageToast')?.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'pageToast';
+    toast.className = `fixed top-4 right-4 z-[100] max-w-sm rounded-xl border px-4 py-3 text-sm shadow-lg ${
+        type === 'success'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+            : 'border-rose-200 bg-rose-50 text-rose-800'
+    }`;
+    toast.innerHTML = `
+        <div class="flex items-start gap-3">
+            <span class="mt-1 h-2 w-2 rounded-full ${type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+            <span>${escapeHtml(message)}</span>
+            <button type="button" class="ml-auto text-current/60 hover:text-current" onclick="this.closest('#pageToast').remove()">x</button>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
+
 function money(value) {
     return `PHP ${(Number(value) || 0).toFixed(2)}`;
 }
@@ -770,6 +822,8 @@ function toggleWalkInConsent() {
         document.getElementById('walkInConsentHint').textContent = 'Signature is required for this service.';
     } else {
         clearWalkInSignature();
+        const accepted = document.getElementById('walkInConsentAccepted');
+        if (accepted) accepted.checked = false;
         document.getElementById('walkInConsentHint').textContent = '';
     }
 }
@@ -875,8 +929,8 @@ function openEditAppointmentModal(id) {
     document.getElementById('edit_date').value = appointment.date;
     document.getElementById('edit_time').value = appointment.time;
     document.getElementById('edit_status').value = appointment.status;
-    document.getElementById('edit_assigned_to').value = appointment.assigned_to || '';
     document.getElementById('edit_notes').value = appointment.notes || '';
+    document.getElementById('edit_assigned_to').value = appointment.assigned_to || '';
 
     const serviceSelect = document.getElementById('edit_service_id');
     const lockHint = document.getElementById('editServiceLockHint');
@@ -926,7 +980,7 @@ document.getElementById('editAppointmentForm')?.addEventListener('submit', async
 
         window.location.reload();
     } catch (error) {
-        alert(error.message || 'Something went wrong while updating the appointment.');
+        showToast(error.message || 'Something went wrong while updating the appointment.');
         button.disabled = false;
         button.textContent = 'Save changes';
     }
@@ -937,6 +991,11 @@ paymentForm?.addEventListener('submit', async (event) => {
 
     const button = document.getElementById('paymentSubmitBtn');
     const appointmentId = document.getElementById('payment_appointment_id').value;
+    const receiptWindow = window.open('', '_blank');
+    if (receiptWindow) {
+        receiptWindow.document.write('<!doctype html><title>Opening receipt...</title><body style="font-family:Arial,sans-serif;padding:24px;color:#4d4037;">Opening receipt...</body>');
+        receiptWindow.document.close();
+    }
     button.disabled = true;
     button.textContent = 'Processing...';
 
@@ -955,10 +1014,15 @@ paymentForm?.addEventListener('submit', async (event) => {
             throw new Error(data.message || 'Payment failed.');
         }
 
-        window.open(`/invoices/${data.invoice_id}/receipt`, '_blank');
+        if (receiptWindow) {
+            receiptWindow.location.href = `/invoices/${data.invoice_id}/receipt`;
+        } else {
+            window.location.href = `/invoices/${data.invoice_id}/receipt`;
+        }
         window.location.reload();
     } catch (error) {
-        alert(error.message || 'Something went wrong while processing the payment.');
+        receiptWindow?.close();
+        showToast(error.message || 'Something went wrong while processing the payment.');
         button.disabled = false;
         button.textContent = 'Confirm payment';
     }
@@ -1004,7 +1068,7 @@ async function updateAppointment(select) {
 
         window.location.reload();
     } catch (error) {
-        alert(error.message || 'Something went wrong while updating the appointment.');
+        showToast(error.message || 'Something went wrong while updating the appointment.');
         window.location.reload();
     }
 }
@@ -1017,6 +1081,12 @@ document.addEventListener('change', (event) => {
 
 document.getElementById('walkInForm')?.addEventListener('submit', async function (event) {
     event.preventDefault();
+
+    if (walkInRequiresConsent() && !document.getElementById('walkInConsentAccepted')?.checked) {
+        document.getElementById('walkInConsentHint').textContent = 'Please ask the client to read and accept the consent statements.';
+        document.getElementById('walkInConsentSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
 
     if (walkInRequiresConsent() && !document.getElementById('walkInConsentSignature').value) {
         document.getElementById('walkInConsentHint').textContent = 'Please ask the client to sign before creating the appointment.';
@@ -1046,7 +1116,7 @@ document.getElementById('walkInForm')?.addEventListener('submit', async function
         closeWalkIn();
         window.location.reload();
     } catch (error) {
-        alert(error.message || 'Something went wrong while creating the appointment.');
+        showToast(error.message || 'Something went wrong while creating the appointment.');
         button.disabled = false;
         button.textContent = 'Create appointment';
     }
@@ -1115,7 +1185,9 @@ function clearWalkInSignature() {
     walkInSignatureInput.value = '';
 }
 
-document.getElementById('walkInService')?.addEventListener('change', toggleWalkInConsent);
+document.getElementById('walkInService')?.addEventListener('change', () => {
+    toggleWalkInConsent();
+});
 walkInSignatureCanvas?.addEventListener('mousedown', startWalkInSignature);
 walkInSignatureCanvas?.addEventListener('mousemove', drawWalkInSignature);
 window.addEventListener('mouseup', stopWalkInSignature);
@@ -1125,6 +1197,7 @@ window.addEventListener('touchend', stopWalkInSignature);
 window.addEventListener('resize', resizeWalkInSignatureCanvas);
 
 setTimeout(() => document.getElementById('pageToast')?.remove(), 4000);
+refreshStaffSelects();
 </script>
 
 @endsection

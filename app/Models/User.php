@@ -73,4 +73,9 @@ class User extends Authenticatable
         return $this->role === 'customer';
     }
 
+    public function assignedAppointments()
+    {
+        return $this->hasMany(Appointment::class, 'assigned_to');
+    }
+
 }

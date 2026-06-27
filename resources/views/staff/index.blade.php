@@ -84,7 +84,7 @@
                     <th>Role</th>
                     <th>Created</th>
                     @if($canManage)
-                        <th class="text-right">Actions</th>
+                        <th class="text-center">Actions</th>
                     @endif
                 </tr>
             </thead>
@@ -110,8 +110,8 @@
                         </td>
                         <td class="px-5 py-4 text-xs text-[var(--muted)]">{{ $u->created_at->format('M d, Y') }}</td>
                         @if($canManage)
-                            <td class="px-5 py-4">
-                                <div class="flex justify-end gap-2">
+                            <td class="px-5 py-4 text-center">
+                                <div class="flex justify-center gap-2">
                                     <button onclick="openEditModal({{ $u->id }}, @js($u->name), @js($u->email), @js($u->role))"
                                             class="rounded-lg bg-[var(--creamed-oat)] px-3 py-2 text-xs font-bold text-[var(--ink)] transition hover:bg-[var(--soft-sandstone)]/70">
                                         Edit
@@ -187,7 +187,7 @@
     <div id="userModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
         <div class="flex min-h-full items-center justify-center p-4">
             <div class="fixed inset-0 bg-[#2c241f]/55 backdrop-blur-sm" onclick="closeModal()"></div>
-            <div class="theme-card modal-panel relative w-full max-w-md overflow-hidden rounded-2xl">
+            <div class="theme-card modal-panel relative w-full max-w-lg overflow-hidden rounded-2xl">
                 <div class="flex items-center justify-between border-b border-[var(--soft-sandstone)]/35 px-6 py-4">
                     <h2 class="text-base font-bold text-[var(--ink)]">Add User</h2>
                     <button onclick="closeModal()" class="text-sm font-bold text-[var(--muted)] hover:text-[var(--ink)]">Close</button>
@@ -213,7 +213,7 @@
     <div id="editModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
         <div class="flex min-h-full items-center justify-center p-4">
             <div class="fixed inset-0 bg-[#2c241f]/55 backdrop-blur-sm" onclick="closeEditModal()"></div>
-            <div class="theme-card modal-panel relative w-full max-w-md overflow-hidden rounded-2xl">
+            <div class="theme-card modal-panel relative w-full max-w-lg overflow-hidden rounded-2xl">
                 <div class="flex items-center justify-between border-b border-[var(--soft-sandstone)]/35 px-6 py-4">
                     <h2 class="text-base font-bold text-[var(--ink)]">Edit User</h2>
                     <button onclick="closeEditModal()" class="text-sm font-bold text-[var(--muted)] hover:text-[var(--ink)]">Close</button>
@@ -306,10 +306,11 @@ function closeModal() {
 }
 
 function openEditModal(id, name, email, role) {
+    const form = document.getElementById('editForm');
     document.getElementById('edit_name').value = name;
     document.getElementById('edit_email').value = email;
     document.getElementById('edit_role').value = role;
-    document.getElementById('editForm').action = `/staff/${id}`;
+    form.action = `/staff/${id}`;
     document.getElementById('editModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }

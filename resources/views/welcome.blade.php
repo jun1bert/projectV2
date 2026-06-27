@@ -130,6 +130,23 @@
             border-color: var(--desert-rock);
         }
 
+        input.form-field[type="date"],
+        input.form-field[type="time"],
+        select.form-field {
+            color: var(--ink);
+            color-scheme: light;
+            min-height: 56px;
+            -webkit-text-fill-color: var(--ink);
+            appearance: auto;
+            -webkit-appearance: auto;
+        }
+
+        input.form-field[type="date"]::-webkit-date-and-time-value,
+        input.form-field[type="time"]::-webkit-date-and-time-value {
+            color: var(--ink);
+            text-align: left;
+        }
+
         /* Field-level validation states */
         .form-field.field-error {
             border-color: #e05252;
@@ -207,7 +224,7 @@
 
 {{-- Hero --}}
 @php
-    $heroImage = asset('images/1.png');
+    $heroImage = asset('images/image8.jpeg');
 @endphp
 <section class="hero-media relative min-h-[92vh] px-4 pt-28 sm:pt-32"
          style="--hero-image: url('{{ $heroImage }}');">
@@ -248,11 +265,11 @@
         </div>
 
         <div class="relative hidden min-h-[560px] lg:block">
-            <img src="{{ asset('images/2.png') }}" alt="Martinis and Manicures establishment interior"
+            <img src="{{ asset('images/3.jpg') }}" alt="Manicure station at Martinis and Manicures"
                  class="hero-photo absolute right-0 top-4 h-[420px] w-72 rounded-2xl object-cover">
-            <img src="{{ asset('images/3.jpg') }}" alt="Martinis and Manicures service area"
+            <img src="{{ asset('images/image11.jpeg') }}" alt="Body care treatment room at Martinis and Manicures"
                  class="hero-photo absolute left-0 top-36 h-80 w-56 rounded-2xl object-cover">
-            <img src="{{ asset('images/4.jpg') }}" alt="Martinis and Manicures detail"
+            <img src="{{ asset('images/4.jpg') }}" alt="Comfortable pedicure lounge at Martinis and Manicures"
                  class="hero-photo absolute bottom-0 right-16 h-56 w-48 rounded-2xl object-cover">
         </div>
     </div>
@@ -260,11 +277,13 @@
 
 {{-- Establishment preview --}}
 <section class="px-4 py-12">
-    <div class="mx-auto grid max-w-7xl gap-4 sm:grid-cols-3">
+    <div class="mx-auto grid max-w-7xl gap-4 sm:grid-cols-5">
         @foreach([
-            ['src' => asset('images/5.jpg'), 'alt' => 'Martinis and Manicures establishment photo'],
-            ['src' => asset('images/6.jpg'), 'alt' => 'Martinis and Manicures interior photo'],
-            ['src' => asset('images/7.jpg'), 'alt' => 'Martinis and Manicures service area photo'],
+            ['src' => asset('images/image1.jpeg'), 'alt' => 'Main salon and manicure area'],
+            ['src' => asset('images/image9.jpeg'), 'alt' => 'Martinis and Manicures reception and refreshment bar'],
+            ['src' => asset('images/image12.jpeg'), 'alt' => 'Pedicure lounge with reclining chairs'],
+            ['src' => asset('images/image6.jpeg'), 'alt' => 'Private body care treatment room'],
+            ['src' => asset('images/image14.jpeg'), 'alt' => 'Private treatment corridor at Martinis and Manicures'],
         ] as $photo)
             <img src="{{ $photo['src'] }}"
                  alt="{{ $photo['alt'] }}"
@@ -328,25 +347,36 @@
     @else
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-7xl mx-auto">
             @foreach($galleryImages as $image)
+                @php
+                    $galleryUrl = $image->url;
+                @endphp
                 <button type="button"
                     class="gallery-card relative overflow-hidden rounded-2xl bg-[var(--creamed-oat)] group animate-fade-up w-full text-left shadow-xl shadow-[#4d4037]/10
                            {{ $loop->first ? 'lg:col-span-2 lg:row-span-2' : '' }}"
-                    onclick="openGalleryModal(this)"
-                    data-gallery-src="{{ asset('storage/' . $image->path) }}"
+                    @if($image->exists_on_disk) onclick="openGalleryModal(this)" @endif
+                    data-gallery-src="{{ $galleryUrl }}"
                     data-gallery-title="{{ $image->title ?? 'Gallery image' }}"
                     data-gallery-caption="{{ $image->caption ?? '' }}">
 
                     <div class="absolute inset-0 bg-[var(--soft-sandstone)]/35 animate-pulse"></div>
 
-                    <img src="{{ asset('storage/' . $image->path) }}"
-                         alt="{{ $image->title ?? 'Gallery image' }}"
-                         loading="lazy"
-                         onload="this.previousElementSibling.style.display='none'; this.classList.remove('opacity-0')"
-                         onerror="this.onerror=null; this.src='{{ asset('images/placeholder-gallery.jpg') }}'; this.previousElementSibling.style.display='none'; this.classList.remove('opacity-0')"
-                         class="relative z-10 w-full object-cover opacity-0
-                                transition-all duration-700 ease-out
-                                group-hover:scale-105 group-hover:brightness-90
-                                {{ $loop->first ? 'h-[420px] sm:h-[520px] lg:h-[650px]' : 'h-[260px] sm:h-[310px]' }}">
+                    @if($image->exists_on_disk)
+                        <img src="{{ $galleryUrl }}"
+                             alt="{{ $image->title ?? 'Gallery image' }}"
+                             loading="lazy"
+                             onload="this.previousElementSibling.style.display='none'; this.classList.remove('opacity-0')"
+                             class="relative z-10 w-full object-cover opacity-0
+                                    transition-all duration-700 ease-out
+                                    group-hover:scale-105 group-hover:brightness-90
+                                    {{ $loop->first ? 'h-[420px] sm:h-[520px] lg:h-[650px]' : 'h-[260px] sm:h-[310px]' }}">
+                    @else
+                        <div class="relative z-10 grid w-full place-items-center bg-[var(--creamed-oat)] p-6 text-center {{ $loop->first ? 'h-[420px] sm:h-[520px] lg:h-[650px]' : 'h-[260px] sm:h-[310px]' }}">
+                            <div>
+                                <p class="text-sm font-bold text-[var(--ink)]">Gallery image missing</p>
+                                <p class="mt-2 break-all text-xs leading-5 text-[var(--muted)]">{{ $image->path }}</p>
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="absolute inset-0 z-10 bg-gradient-to-t from-[#4d4037]/75 via-[#4d4037]/8 to-transparent
                                 opacity-0 group-hover:opacity-100 transition duration-300"></div>
@@ -566,16 +596,11 @@
                 <div>
                     <select id="field_time" name="time" class="form-field w-full p-4 rounded-xl">
                         <option value="">Select Time</option>
-                        <option value="08:00" {{ old('time') == '08:00' ? 'selected' : '' }}>8:00 AM</option>
-                        <option value="09:00" {{ old('time') == '09:00' ? 'selected' : '' }}>9:00 AM</option>
-                        <option value="10:00" {{ old('time') == '10:00' ? 'selected' : '' }}>10:00 AM</option>
-                        <option value="11:00" {{ old('time') == '11:00' ? 'selected' : '' }}>11:00 AM</option>
-                        <option value="12:00" {{ old('time') == '12:00' ? 'selected' : '' }}>12:00 PM</option>
-                        <option value="13:00" {{ old('time') == '13:00' ? 'selected' : '' }}>1:00 PM</option>
-                        <option value="14:00" {{ old('time') == '14:00' ? 'selected' : '' }}>2:00 PM</option>
-                        <option value="15:00" {{ old('time') == '15:00' ? 'selected' : '' }}>3:00 PM</option>
-                        <option value="16:00" {{ old('time') == '16:00' ? 'selected' : '' }}>4:00 PM</option>
-                        <option value="17:00" {{ old('time') == '17:00' ? 'selected' : '' }}>5:00 PM</option>
+                        @foreach($onlineTimeSlots as $slot)
+                            <option value="{{ $slot }}" {{ old('time') == $slot ? 'selected' : '' }}>
+                                {{ \Carbon\Carbon::createFromFormat('H:i', $slot)->format('g:i A') }}
+                            </option>
+                        @endforeach
                     </select>
                     <p id="hint_time" class="field-hint hidden"></p>
                 </div>
@@ -589,20 +614,14 @@
                           class="form-field w-full p-4 rounded-xl resize-none">{{ old('notes') }}</textarea>
             </div>
 
-            <div id="consentSection" class="hidden rounded-2xl border border-[var(--soft-sandstone)] bg-[var(--feather-white)]/70 p-4">
-                <h3 class="text-lg font-semibold text-[var(--ink)]">Client Consent</h3>
-                <p class="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-                    I voluntarily request this service. I understand the nature of the service, have disclosed relevant health concerns, and consent to receive this service from Martinis and Manicures.
-                </p>
-                <div class="mt-4 rounded-xl border border-[var(--soft-sandstone)] bg-white p-2">
-                    <canvas id="signatureCanvas" class="h-40 w-full touch-none rounded-lg bg-white"></canvas>
-                </div>
-                <input type="hidden" id="consent_signature" name="consent_signature">
-                <div class="mt-3 flex items-center justify-between gap-3">
-                    <p id="hint_consent" class="field-hint hidden"></p>
-                    <button type="button" onclick="clearSignature()" class="text-sm font-semibold text-[var(--desert-rock)]">Clear signature</button>
-                </div>
-            </div>
+            <x-consent-form
+                section-id="consentSection"
+                canvas-id="signatureCanvas"
+                signature-input-id="consent_signature"
+                accepted-input-id="consent_accepted"
+                hint-id="hint_consent"
+                clear-function="clearSignature"
+            />
 
             <button type="button" onclick="openConfirmModal()"
                     class="w-full btn-gold py-3.5 rounded-xl tracking-wide transition-all duration-200 active:scale-[.98]">
@@ -700,6 +719,20 @@ function isFullyBooked(dateStr) {
     return (bookedSlots[dateStr] ?? 0) >= MAX_CAPACITY;
 }
 
+function updateAvailableTimes() {
+    const timeField = document.getElementById('field_time');
+    if (!timeField) return;
+
+    Array.from(timeField.options).forEach((option) => {
+        if (!option.value) return;
+
+        const baseLabel = option.dataset.label || option.textContent.replace(' (Booked)', '').replace(' (Unavailable)', '');
+        option.dataset.label = baseLabel;
+        option.disabled = false;
+        option.textContent = baseLabel;
+    });
+}
+
 /* Date helpers */
 function todayString() {
     const now = new Date();
@@ -737,8 +770,14 @@ document.addEventListener('DOMContentLoaded', function () {
             dateField.value = '';
         }
 
-        dateField.addEventListener('change', validateDate);
+        dateField.addEventListener('change', () => {
+            updateAvailableTimes();
+            validateDate();
+            validateTime();
+        });
     }
+
+    updateAvailableTimes();
 });
 
 /* Field validation helpers */
@@ -835,6 +874,8 @@ function toggleConsentSection() {
     section.classList.toggle('hidden', !selectedServiceRequiresConsent());
     if (!selectedServiceRequiresConsent()) {
         clearSignature();
+        const accepted = document.getElementById('consent_accepted');
+        if (accepted) accepted.checked = false;
         setHint('hint_consent', '', '');
     } else {
         resizeSignatureCanvas();
@@ -843,6 +884,12 @@ function toggleConsentSection() {
 
 function validateConsent() {
     if (!selectedServiceRequiresConsent()) return true;
+
+    if (!document.getElementById('consent_accepted')?.checked) {
+        setHint('hint_consent', 'Please read and accept the consent statements.', 'error');
+        document.getElementById('consentSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
 
     if (!document.getElementById('consent_signature').value) {
         setHint('hint_consent', 'Signature is required for this service.', 'error');
@@ -877,16 +924,19 @@ function validateDate() {
     }
     setHint('hint_date', `${formatDateFriendly(val)} is available.`, 'ok');
     setFieldState('field_date', true);
+    updateAvailableTimes();
     return true;
 }
 
 function validateTime() {
     const val = document.getElementById('field_time').value;
+    const dateVal = document.getElementById('field_date').value;
     if (!val) {
         setHint('hint_time', 'Please select a time.', 'error');
         setFieldState('field_time', false);
         return false;
     }
+
     setHint('hint_time', '', '');
     setFieldState('field_time', true);
     return true;
@@ -899,6 +949,8 @@ document.getElementById('field_email')?.addEventListener('blur', validateEmail);
 document.getElementById('field_service')?.addEventListener('change', () => {
     validateService();
     toggleConsentSection();
+    updateAvailableTimes();
+    validateTime();
 });
 document.getElementById('field_time')?.addEventListener('change', validateTime);
 

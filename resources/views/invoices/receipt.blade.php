@@ -179,7 +179,7 @@ thead td {
 <div class="receipt">
     <div class="center">
         <img src="{{ asset('images/martinis-logo.png') }}" class="logo" alt="Martinis and Manicures Logo">
-        <div class="receipt-title">Official Receipt</div>
+        <div class="receipt-title">Service Invoice</div>
         <div class="muted">Thank you for choosing us</div>
     </div>
 
@@ -188,7 +188,7 @@ thead td {
     <div class="section-title">Transaction Details</div>
 
     <div class="row">
-        <span>Receipt No.</span>
+        <span>Invoice No.</span>
         <span>#{{ str_pad($invoice->id, 6, '0', STR_PAD_LEFT) }}</span>
     </div>
 
