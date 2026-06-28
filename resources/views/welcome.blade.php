@@ -296,43 +296,77 @@
 {{-- Services --}}
 <section id="services" class="section-band px-4 py-20">
     <div class="text-center mb-12">
-        <h2 class="text-3xl font-light">Signature Services</h2>
-        <p class="text-[var(--muted)] mt-3 text-sm">Clear choices, calm pacing, no guesswork.</p>
+        <h2 class="text-3xl font-light">Explore Our Services</h2>
+        <p class="text-[var(--muted)] mt-3 text-sm">Choose a category to find the treatment that fits your visit.</p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
-        @forelse($services as $service)
-            <div class="warm-panel flex min-h-[210px] flex-col rounded-2xl p-6">
-                <div class="flex items-start justify-between gap-4">
-                    <h3 class="text-xl">{{ $service->name }}</h3>
-                    @if($service->requires_consent)
-                    <span class="shrink-0 rounded-full bg-[rgba(164,141,120,.14)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--desert-rock)]">
-                        Consent
-                    </span>
-                    @endif
-                </div>
-                <div class="flex items-center gap-2 mt-2 text-sm">
-                    <span class="text-[var(--desert-rock)] font-semibold">
-                        &#8369;{{ number_format($service->price, 2) }}
-                    </span>
-                    <span class="text-[var(--soft-sandstone)]">&bull;</span>
-                    <span class="text-[var(--muted)]">{{ $service->duration }} mins</span>
-                </div>
-                @if($service->description)
-                    <p class="text-[var(--muted)] mt-3 text-sm leading-relaxed">
-                        {{ $service->description }}
-                    </p>
-                @endif
-                <a href="#book" class="mt-auto pt-5 text-sm font-bold text-[var(--desert-rock)] hover:text-[#8f7663]">
-                    Book this service
-                </a>
+    @php
+        $servicesByCategory = $services->groupBy('category');
+    @endphp
+
+    @if($servicesByCategory->isNotEmpty())
+        <div class="mx-auto max-w-7xl">
+            <div class="flex gap-2 overflow-x-auto pb-3" role="tablist" aria-label="Service categories">
+                @foreach($servicesByCategory as $category => $categoryServices)
+                    <button type="button"
+                            class="service-category-tab shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold transition {{ $loop->first ? 'border-[var(--desert-rock)] bg-[var(--desert-rock)] text-white' : 'border-[var(--soft-sandstone)] bg-[var(--feather-white)] text-[var(--ink)] hover:bg-[var(--creamed-oat)]' }}"
+                            role="tab"
+                            aria-selected="{{ $loop->first ? 'true' : 'false' }}"
+                            aria-controls="service-category-{{ $loop->index }}"
+                            data-category-target="service-category-{{ $loop->index }}">
+                        {{ $category }}
+                        <span class="ml-1 opacity-70">{{ $categoryServices->count() }}</span>
+                    </button>
+                @endforeach
             </div>
-        @empty
-            <div class="col-span-full text-center text-[var(--muted)] text-sm py-10">
-                No services available yet.
-            </div>
-        @endforelse
-    </div>
+
+            @foreach($servicesByCategory as $category => $categoryServices)
+                <section id="service-category-{{ $loop->index }}"
+                         class="service-category-panel mt-8 {{ $loop->first ? '' : 'hidden' }}"
+                         role="tabpanel">
+                    <div class="mb-5 flex items-end justify-between gap-4">
+                        <div>
+                            <h3 class="text-2xl">{{ $category }}</h3>
+                            <p class="mt-1 text-sm text-[var(--muted)]">{{ $categoryServices->count() }} service{{ $categoryServices->count() === 1 ? '' : 's' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        @foreach($categoryServices as $service)
+                            <article class="warm-panel flex min-h-[210px] flex-col rounded-2xl p-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <h4 class="text-xl">{{ $service->name }}</h4>
+                                    @if($service->requires_consent)
+                                        <span class="shrink-0 rounded-full bg-[rgba(164,141,120,.14)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--desert-rock)]">Consent</span>
+                                    @endif
+                                </div>
+                                <div class="mt-2 flex items-center gap-2 text-sm">
+                                    <span class="font-semibold text-[var(--desert-rock)]">&#8369;{{ number_format($service->price, 2) }}</span>
+                                    <span class="text-[var(--soft-sandstone)]">&bull;</span>
+                                    <span class="text-[var(--muted)]">{{ $service->duration ? $service->duration.' mins' : 'No fixed duration' }}</span>
+                                    @if($service->session_count > 1)
+                                        <span class="text-[var(--soft-sandstone)]">&bull;</span>
+                                        <span class="font-semibold text-violet-700">{{ $service->session_count }} sessions</span>
+                                    @endif
+                                </div>
+                                @if($service->description)
+                                    <p class="mt-3 text-sm leading-relaxed text-[var(--muted)]">{{ $service->description }}</p>
+                                @endif
+                                <a href="#book"
+                                   data-book-service="{{ $service->id }}"
+                                   data-book-category="{{ $service->category }}"
+                                   class="mt-auto pt-5 text-sm font-bold text-[var(--desert-rock)] hover:text-[#8f7663]">
+                                    Book this service
+                                </a>
+                            </article>
+                        @endforeach
+                    </div>
+                </section>
+            @endforeach
+        </div>
+    @else
+        <div class="mx-auto max-w-7xl py-10 text-center text-sm text-[var(--muted)]">No services available yet.</div>
+    @endif
 </section>
 
 {{-- Gallery --}}
@@ -569,11 +603,21 @@
             </div>
 
             {{-- Service --}}
+            @php
+                $oldService = $services->firstWhere('id', (int) old('service_id'));
+            @endphp
             <div>
+                <select id="field_service_category" class="form-field mb-3 w-full rounded-xl p-4">
+                    <option value="">Select Service Category</option>
+                    @foreach($services->pluck('category')->unique() as $category)
+                        <option value="{{ $category }}" {{ $oldService?->category === $category ? 'selected' : '' }}>{{ $category }}</option>
+                    @endforeach
+                </select>
                 <select id="field_service" name="service_id" class="form-field w-full p-4 rounded-xl">
-                    <option value="">Select Service</option>
+                    <option value="">Select a category first</option>
                     @foreach($services as $service)
                         <option value="{{ $service->id }}"
+                                data-category="{{ $service->category }}"
                                 data-requires-consent="{{ $service->requires_consent ? '1' : '0' }}"
                                 {{ old('service_id') == $service->id ? 'selected' : '' }}>
                             {{ $service->name }}
@@ -709,6 +753,66 @@
 </div>
 
 <script>
+/* Service category browser */
+const serviceCategoryTabs = document.querySelectorAll('.service-category-tab');
+const serviceCategoryPanels = document.querySelectorAll('.service-category-panel');
+
+function showServiceCategory(tab) {
+    const targetId = tab.dataset.categoryTarget;
+
+    serviceCategoryTabs.forEach((item) => {
+        const selected = item === tab;
+        item.setAttribute('aria-selected', selected ? 'true' : 'false');
+        item.classList.toggle('border-[var(--desert-rock)]', selected);
+        item.classList.toggle('bg-[var(--desert-rock)]', selected);
+        item.classList.toggle('text-white', selected);
+        item.classList.toggle('border-[var(--soft-sandstone)]', !selected);
+        item.classList.toggle('bg-[var(--feather-white)]', !selected);
+        item.classList.toggle('text-[var(--ink)]', !selected);
+    });
+
+    serviceCategoryPanels.forEach((panel) => {
+        panel.classList.toggle('hidden', panel.id !== targetId);
+    });
+}
+
+serviceCategoryTabs.forEach((tab) => {
+    tab.addEventListener('click', () => showServiceCategory(tab));
+});
+
+document.querySelectorAll('[data-book-service]').forEach((link) => {
+    link.addEventListener('click', () => {
+        const categoryField = document.getElementById('field_service_category');
+        const serviceField = document.getElementById('field_service');
+        if (!categoryField || !serviceField) return;
+
+        categoryField.value = link.dataset.bookCategory;
+        filterClientServices(categoryField.value);
+        serviceField.value = link.dataset.bookService;
+        serviceField.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+});
+
+function filterClientServices(category, preserveSelection = false) {
+    const serviceField = document.getElementById('field_service');
+    if (!serviceField) return;
+
+    const previousValue = preserveSelection ? serviceField.value : '';
+    Array.from(serviceField.options).forEach((option) => {
+        if (!option.value) {
+            option.textContent = category ? 'Select Service' : 'Select a category first';
+            return;
+        }
+
+        const visible = option.dataset.category === category;
+        option.hidden = !visible;
+        option.disabled = !visible;
+    });
+
+    serviceField.disabled = !category;
+    serviceField.value = previousValue;
+}
+
 /* Capacity check */
 // Slot data injected from the controller (confirmed counts per date).
 // Shape: { "2025-07-10": 8, "2025-07-11": 10 }
@@ -760,6 +864,13 @@ function formatTime(time) {
 
 /* Set date min on load */
 document.addEventListener('DOMContentLoaded', function () {
+    const categoryField = document.getElementById('field_service_category');
+    filterClientServices(categoryField?.value || '', true);
+    categoryField?.addEventListener('change', () => {
+        filterClientServices(categoryField.value);
+        document.getElementById('field_service')?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
     const dateField = document.getElementById('field_date');
     if (dateField) {
         const today = todayString();

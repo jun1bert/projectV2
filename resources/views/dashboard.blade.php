@@ -103,7 +103,7 @@
                                class="block rounded-xl border border-[var(--soft-sandstone)]/35 bg-white/65 px-2.5 py-2 transition hover:bg-[var(--creamed-oat)]/40">
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="truncate text-[11px] font-bold text-[var(--ink)]">{{ $appointment->full_name }}</span>
-                                    <span class="shrink-0 text-[10px] font-bold text-[var(--desert-rock)]">{{ substr((string) $appointment->time, 0, 5) }}</span>
+                                    <span class="shrink-0 text-[10px] font-bold text-[var(--desert-rock)]">{{ $appointment->formatted_time }}</span>
                                 </div>
                                 <div class="mt-1 flex items-center justify-between gap-2">
                                     <span class="truncate text-[10px] font-semibold text-[var(--muted)]">{{ $appointment->service->name ?? 'Service' }}</span>
@@ -149,7 +149,7 @@
                         </span>
                     </div>
                     <div class="mt-3 flex items-center justify-between gap-3 text-xs font-semibold text-[var(--muted)]">
-                        <span>{{ substr((string) $appointment->time, 0, 5) }}</span>
+                        <span>{{ $appointment->formatted_time }}</span>
                         <span>{{ $appointment->assigned_staff_names }}</span>
                     </div>
                 </article>

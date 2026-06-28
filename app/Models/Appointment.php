@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Appointment extends Model
 {
@@ -12,6 +13,9 @@ class Appointment extends Model
         'email',
         'client_id',
         'service_id',
+        'service_package_id',
+        'package_session_consumed',
+        'price_at_booking',
         'date',
         'time',
         'notes',
@@ -22,11 +26,18 @@ class Appointment extends Model
 
     protected $casts = [
         'completion_notified_at' => 'datetime',
+        'price_at_booking' => 'decimal:2',
+        'package_session_consumed' => 'boolean',
     ];
 
     public function assignedStaffMembers()
     {
         return $this->belongsToMany(User::class, 'appointment_staff')->withTimestamps();
+    }
+
+    public function getFormattedTimeAttribute(): string
+    {
+        return Carbon::parse((string) $this->time)->format('g:i A');
     }
 
     public function client()
@@ -45,11 +56,7 @@ class Appointment extends Model
 
     public function getPaymentStatusAttribute(): string
     {
-        if ($this->relationLoaded('invoice')) {
-            return $this->invoice?->status ?? 'unpaid';
-        }
-
-        return $this->invoice()->value('status') ?? 'unpaid';
+        return $this->billing_invoice?->status ?? 'unpaid';
     }
 
     /*
@@ -59,12 +66,30 @@ class Appointment extends Model
     */
     public function service()
     {
-        return $this->belongsTo(Service::class);
+        return $this->belongsTo(Service::class)->withTrashed();
     }
 
     public function invoice()
     {
         return $this->hasOne(Invoice::class);
+    }
+
+    public function servicePackage()
+    {
+        return $this->belongsTo(ServicePackage::class);
+    }
+
+    public function getBillingInvoiceAttribute(): ?Invoice
+    {
+        if ($this->invoice) {
+            return $this->invoice;
+        }
+
+        if (! $this->service_package_id) {
+            return null;
+        }
+
+        return Invoice::whereHas('appointment', fn ($query) => $query->where('service_package_id', $this->service_package_id))->first();
     }
 
     public function consentForm()

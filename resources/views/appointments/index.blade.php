@@ -244,7 +244,7 @@
 
                     <td class="px-5 py-4 align-top">
                         <p class="font-medium text-[var(--ink)]">{{ $appointment->date }}</p>
-                        <p class="mt-1 text-xs text-[var(--muted)]">{{ $appointment->time }}</p>
+                        <p class="mt-1 text-xs text-[var(--muted)]">{{ $appointment->formatted_time }}</p>
                     </td>
 
                     <td class="px-5 py-4 align-top">
@@ -254,9 +254,12 @@
                             </span>
 
                             @if(($appointment->payment_status ?? null) === 'paid')
-                            <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                                Paid
-                            </span>
+                                <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">Paid</span>
+                            @elseif(($appointment->payment_status ?? null) === 'partially_paid')
+                                <span class="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">Partially paid</span>
+                            @endif
+                            @if($appointment->servicePackage)
+                                <span class="inline-flex rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">{{ $appointment->servicePackage->remaining_sessions }} session(s) left</span>
                             @endif
                         </div>
                         <p class="mt-2 max-w-44 text-xs leading-5 text-[var(--muted)]">
@@ -286,8 +289,8 @@
                                     data-id="{{ $appointment->id }}">
                                 Payment
                             </button>
-                            @elseif($appointment->status === 'completed' && ($appointment->payment_status ?? null) === 'paid' && ($appointment->invoice ?? null))
-                            <a href="{{ route('invoices.receipt', $appointment->invoice->id) }}"
+                            @elseif($appointment->status === 'completed' && ($appointment->payment_status ?? null) === 'paid' && $appointment->billing_invoice)
+                            <a href="{{ route('invoices.receipt', $appointment->billing_invoice->id) }}"
                                target="_blank"
                                rel="noopener"
                                class="muted-button rounded-xl px-3 py-2 text-xs font-semibold transition">
@@ -338,9 +341,12 @@
                             {{ ucfirst($appointment->status) }}
                         </span>
                         @if(($appointment->payment_status ?? null) === 'paid')
-                        <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                            Paid
-                        </span>
+                            <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">Paid</span>
+                        @elseif(($appointment->payment_status ?? null) === 'partially_paid')
+                            <span class="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">Partially paid</span>
+                        @endif
+                        @if($appointment->servicePackage)
+                            <span class="inline-flex rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">{{ $appointment->servicePackage->remaining_sessions }} session(s) left</span>
                         @endif
                     </div>
                 </div>
@@ -364,7 +370,7 @@
                 </div>
                 <div class="grid grid-cols-[82px_1fr] gap-3">
                     <span>Schedule</span>
-                    <span class="text-right font-medium text-[var(--ink)]">{{ $appointment->date }} at {{ $appointment->time }}</span>
+                    <span class="text-right font-medium text-[var(--ink)]">{{ $appointment->date }} at {{ $appointment->formatted_time }}</span>
                 </div>
                 <div class="grid grid-cols-[82px_1fr] gap-3">
                     <span>Staff</span>
@@ -393,8 +399,8 @@
                         data-id="{{ $appointment->id }}">
                     Payment
                 </button>
-                @elseif($appointment->status === 'completed' && ($appointment->payment_status ?? null) === 'paid' && ($appointment->invoice ?? null))
-                <a href="{{ route('invoices.receipt', $appointment->invoice->id) }}"
+                @elseif($appointment->status === 'completed' && ($appointment->payment_status ?? null) === 'paid' && $appointment->billing_invoice)
+                <a href="{{ route('invoices.receipt', $appointment->billing_invoice->id) }}"
                    target="_blank"
                    rel="noopener"
                    class="muted-button rounded-xl px-3 py-2.5 text-center text-xs font-semibold transition">
@@ -469,14 +475,33 @@
                     <input type="email" id="walkInEmail" name="email" class="theme-field px-3 py-2.5" placeholder="client@example.com">
                 </div>
 
+                <div id="walkInPackageSection" class="hidden">
+                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Existing package <span class="font-normal">(optional)</span></label>
+                    <select id="walkInServicePackage" name="service_package_id" class="theme-field px-3 py-2.5">
+                        <option value="">Start a new service/package</option>
+                    </select>
+                    <p class="mt-1.5 text-xs text-[var(--muted)]">Choose a package to use one of the client’s remaining sessions.</p>
+                </div>
+
+                <div>
+                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Service category</label>
+                    <select id="walkInServiceCategory" class="theme-field px-3 py-2.5" required>
+                        <option value="">Select a category</option>
+                        @foreach(($services ?? collect())->pluck('category')->unique() as $category)
+                            <option value="{{ $category }}">{{ $category }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div>
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Service</label>
                     <select id="walkInService" name="service_id" class="theme-field px-3 py-2.5" required>
-                        <option value="">Select a service</option>
+                        <option value="">Select a category first</option>
                         @foreach($services ?? [] as $service)
                         <option value="{{ $service->id }}"
+                                data-category="{{ $service->category }}"
                                 data-requires-consent="{{ $service->requires_consent ? '1' : '0' }}"
-                                data-duration="{{ $service->duration ?: 30 }}">
+                                data-duration="{{ $service->duration }}">
                             {{ $service->name }}
                         </option>
                         @endforeach
@@ -627,7 +652,7 @@
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Service</label>
                     <select id="edit_service_id" name="service_id" class="theme-field px-3 py-2.5" required>
                         @foreach($services ?? [] as $service)
-                        <option value="{{ $service->id }}" data-duration="{{ $service->duration ?: 30 }}">{{ $service->name }}</option>
+                        <option value="{{ $service->id }}" data-duration="{{ $service->duration }}">{{ $service->name }}</option>
                         @endforeach
                     </select>
                     <p id="editServiceLockHint" class="mt-1 hidden text-xs text-amber-700">Service cannot be changed after payment.</p>
@@ -718,7 +743,7 @@
             <div class="flex items-center justify-between border-b border-[rgba(164,141,120,.16)] px-5 py-4">
                 <div>
                     <h2 class="text-lg font-semibold text-[var(--ink)]">Process Payment</h2>
-                    <p class="text-xs text-[var(--muted)]">Service total only.</p>
+                    <p class="text-xs text-[var(--muted)]">Accept a full payment or record an installment.</p>
                 </div>
                 <button type="button" class="muted-button rounded-lg px-3 py-1.5 text-sm" onclick="closePayment()">Close</button>
             </div>
@@ -736,11 +761,27 @@
                         <span class="font-semibold text-[var(--ink)]">Total</span>
                         <span id="pm_total" class="font-bold text-[var(--desert-rock)]">PHP 0.00</span>
                     </div>
+                    <div class="mt-2 flex justify-between gap-4 text-[var(--muted)]">
+                        <span>Already paid</span>
+                        <span id="pm_paid" class="font-semibold text-[var(--ink)]">PHP 0.00</span>
+                    </div>
+                    <div class="mt-2 flex justify-between gap-4 text-[var(--muted)]">
+                        <span>Remaining balance</span>
+                        <span id="pm_balance" class="font-semibold text-rose-700">PHP 0.00</span>
+                    </div>
                 </div>
 
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Amount due</label>
-                    <input type="number" name="amount" id="payment_amount" class="theme-field px-3 py-2.5" readonly>
+                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Payment type</label>
+                    <select name="payment_type" id="payment_type" class="theme-field px-3 py-2.5" required>
+                        <option value="full">Full remaining balance</option>
+                        <option value="partial">Partial payment</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Amount to pay</label>
+                    <input type="number" name="amount" id="payment_amount" min="0.01" step="0.01" class="theme-field px-3 py-2.5" readonly required>
                 </div>
 
                 <div>
@@ -898,10 +939,49 @@ const walkInClientId = document.getElementById('walkInClientId');
 const walkInFullName = document.getElementById('walkInFullName');
 const walkInContactNumber = document.getElementById('walkInContactNumber');
 const walkInEmail = document.getElementById('walkInEmail');
+const walkInServiceCategory = document.getElementById('walkInServiceCategory');
+const walkInService = document.getElementById('walkInService');
+const walkInServicePackage = document.getElementById('walkInServicePackage');
+const walkInPackageSection = document.getElementById('walkInPackageSection');
 const walkInClientSuggestions = document.getElementById('walkInClientSuggestions');
 const walkInClientHint = document.getElementById('walkInClientHint');
 let clientSearchTimer;
 let fillingClient = false;
+
+function filterWalkInServices(category) {
+    if (!walkInService) return;
+
+    Array.from(walkInService.options).forEach((option) => {
+        if (!option.value) {
+            option.textContent = category ? 'Select a service' : 'Select a category first';
+            return;
+        }
+
+        const visible = option.dataset.category === category;
+        option.hidden = !visible;
+        option.disabled = !visible;
+    });
+
+    walkInService.value = '';
+    walkInService.disabled = !category;
+}
+
+filterWalkInServices('');
+walkInServiceCategory?.addEventListener('change', () => {
+    if (walkInServicePackage) walkInServicePackage.value = '';
+    filterWalkInServices(walkInServiceCategory.value);
+    toggleWalkInConsent();
+});
+
+walkInServicePackage?.addEventListener('change', () => {
+    const option = walkInServicePackage.options[walkInServicePackage.selectedIndex];
+    if (!option?.value) return;
+
+    walkInServiceCategory.value = option.dataset.category;
+    filterWalkInServices(option.dataset.category);
+    walkInService.value = option.dataset.serviceId;
+    walkInService.dispatchEvent(new Event('change', { bubbles: true }));
+});
 
 function closeClientSuggestions() {
     walkInClientSuggestions?.classList.add('hidden');
@@ -913,14 +993,31 @@ function selectExistingClient(client) {
     walkInFullName.value = client.full_name;
     walkInContactNumber.value = client.contact_number;
     walkInEmail.value = client.email || '';
+    populateClientPackages(client.service_packages || []);
     walkInClientHint.textContent = `Returning client selected · ${client.appointments_count} previous visit${client.appointments_count === 1 ? '' : 's'}`;
     walkInClientHint.className = 'mt-1.5 text-xs font-semibold text-emerald-700';
     closeClientSuggestions();
     fillingClient = false;
 }
 
+function populateClientPackages(packages) {
+    if (!walkInServicePackage || !walkInPackageSection) return;
+
+    walkInServicePackage.innerHTML = '<option value="">Start a new service/package</option>';
+    packages.forEach((servicePackage) => {
+        const option = document.createElement('option');
+        option.value = servicePackage.id;
+        option.dataset.serviceId = servicePackage.service_id;
+        option.dataset.category = servicePackage.service?.category || '';
+        option.textContent = `${servicePackage.service?.name || 'Package'} - ${servicePackage.available_sessions} session(s) available`;
+        walkInServicePackage.appendChild(option);
+    });
+    walkInPackageSection.classList.toggle('hidden', packages.length === 0);
+}
+
 function useNewClient() {
     walkInClientId.value = '';
+    populateClientPackages([]);
     walkInClientHint.textContent = 'New client — a client record will be created with these details.';
     walkInClientHint.className = 'mt-1.5 text-xs font-semibold text-[var(--desert-rock)]';
     closeClientSuggestions();
@@ -1010,23 +1107,40 @@ function closePayment() {
     }
 }
 
-function calculatePaymentTotal(servicePrice = currentServicePrice) {
-    const total = Number(servicePrice) || 0;
+function calculatePaymentTotal(totalValue = currentServicePrice, paidValue = 0, balanceValue = totalValue) {
+    const total = Number(totalValue) || 0;
+    const paid = Number(paidValue) || 0;
+    const balance = Number(balanceValue) || 0;
     document.getElementById('pm_service_price').textContent = money(total);
     document.getElementById('pm_total').textContent = money(total);
-    document.getElementById('payment_amount').value = total.toFixed(2);
+    document.getElementById('pm_paid').textContent = money(paid);
+    document.getElementById('pm_balance').textContent = money(balance);
+    document.getElementById('payment_type').value = 'full';
+    document.getElementById('payment_amount').readOnly = true;
+    document.getElementById('payment_amount').value = balance.toFixed(2);
 }
 
 document.addEventListener('click', (event) => {
     const button = event.target.closest('.pay-btn');
     if (!button) return;
 
-    const row = button.closest('.filter-row');
-    currentServicePrice = Number(row?.dataset.price || 0);
-    document.getElementById('payment_appointment_id').value = button.dataset.id;
-    calculatePaymentTotal(currentServicePrice);
+    const appointment = appointmentRecords[button.dataset.id];
+    if (!appointment) return;
+    currentServicePrice = Number(appointment.billing_total || 0);
+    document.getElementById('payment_appointment_id').value = appointment.id;
+    calculatePaymentTotal(appointment.billing_total, appointment.billing_paid, appointment.billing_balance);
     paymentModal.classList.remove('hidden');
     setBodyLock(true);
+});
+
+document.getElementById('payment_type')?.addEventListener('change', (event) => {
+    const amount = document.getElementById('payment_amount');
+    const appointment = appointmentRecords[document.getElementById('payment_appointment_id').value];
+    const balance = Number(appointment?.billing_balance || 0);
+    const partial = event.target.value === 'partial';
+    amount.readOnly = !partial;
+    amount.value = partial ? '' : balance.toFixed(2);
+    if (partial) amount.focus();
 });
 
 document.addEventListener('click', (event) => {
@@ -1074,7 +1188,7 @@ function openPreviewModal(id) {
     document.getElementById('previewEmail').textContent = appointment.email || 'Email not provided';
     document.getElementById('previewService').textContent = appointment.service_name;
     document.getElementById('previewAmount').textContent = money(appointment.service_price);
-    document.getElementById('previewSchedule').textContent = `${appointment.date} at ${appointment.time}`;
+    document.getElementById('previewSchedule').textContent = `${appointment.date} at ${appointment.display_time}`;
     document.getElementById('previewBooking').textContent = `Booking: ${appointment.booking_type}`;
     document.getElementById('previewStatus').textContent = appointment.status;
     document.getElementById('previewAssigned').textContent = `Staff: ${appointment.assigned_staff}`;
@@ -1351,6 +1465,10 @@ function clearWalkInSignature() {
 }
 
 document.getElementById('walkInService')?.addEventListener('change', () => {
+    const packageOption = walkInServicePackage?.options[walkInServicePackage.selectedIndex];
+    if (packageOption?.value && packageOption.dataset.serviceId !== walkInService.value) {
+        walkInServicePackage.value = '';
+    }
     toggleWalkInConsent();
 });
 walkInSignatureCanvas?.addEventListener('mousedown', startWalkInSignature);

@@ -103,7 +103,7 @@
                     <tr>
                         <td>{{ $appointment->full_name }}</td>
                         <td>{{ $appointment->service->name ?? 'Unavailable' }}</td>
-                        <td>{{ $appointment->date }} {{ $appointment->time }}</td>
+                        <td>{{ $appointment->date }} {{ $appointment->formatted_time }}</td>
                         <td>{{ ucfirst($appointment->status) }}</td>
                     </tr>
                 @empty
@@ -129,17 +129,17 @@
             <tbody>
                 @forelse($salesRows as $appointment)
                     <tr>
-                        <td>{{ $appointment->date }} {{ $appointment->time }}</td>
+                        <td>{{ $appointment->date }} {{ $appointment->formatted_time }}</td>
                         <td>{{ $appointment->full_name }}</td>
                         <td>
                             {{ $appointment->contact_number }}
-                            @if($appointment->client_email)
-                                <br>{{ $appointment->client_email }}
+                            @if($appointment->email)
+                                <br>{{ $appointment->email }}
                             @endif
                         </td>
                         <td>{{ $appointment->service->name ?? 'Unavailable' }}</td>
                         <td>{{ ucfirst($appointment->invoice->payment_method ?? 'unpaid') }}</td>
-                        <td class="right">&#8369;{{ number_format($appointment->service->price ?? 0, 2) }}</td>
+                        <td class="right">&#8369;{{ number_format($appointment->invoice?->amount_paid ?? 0, 2) }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="6">No sales data for this period.</td></tr>

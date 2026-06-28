@@ -37,7 +37,10 @@ class WelcomeController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        $services = Service::where('is_active', true)->get();
+        $services = Service::where('is_active', true)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get();
 
         $bookedSlots = Appointment::query()
             ->where('status', 'confirmed')

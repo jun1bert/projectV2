@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\ConsentForm;
 use App\Models\Service;
+use App\Models\ServicePackage;
 use App\Models\User;
 use App\Services\AppointmentCompletionNotifier;
 use Illuminate\Http\Request;
@@ -65,7 +66,9 @@ class AppointmentController extends Controller
             'date.after_or_equal' => 'Please choose today or a future date.',
         ]);
 
-        $service = Service::findOrFail($validated['service_id']);
+        $service = empty($validated['service_package_id'])
+            ? Service::findOrFail($validated['service_id'])
+            : Service::withTrashed()->findOrFail($validated['service_id']);
         if ($service->requires_consent && empty($validated['consent_accepted'])) {
             return back()
                 ->withInput()
@@ -100,11 +103,14 @@ class AppointmentController extends Controller
                 'email' => $validated['email'] ?? null,
                 'client_id' => $client->id,
                 'service_id' => $validated['service_id'],
+                'price_at_booking' => $service->price,
                 'date' => $validated['date'],
                 'time' => $validated['time'],
                 'notes' => $validated['notes'] ?? null,
                 'status' => 'pending',
             ]);
+
+            $this->attachServicePackage($appointment, $service, $client);
 
             $this->storeConsentIfRequired($appointment, $service, $validated['consent_signature'] ?? null);
         });
@@ -148,7 +154,7 @@ class AppointmentController extends Controller
             abort(403);
         }
 
-        $appointments = Appointment::with(['service', 'assignedStaffMembers', 'invoice', 'consentForm'])
+        $appointments = Appointment::with(['service', 'servicePackage', 'assignedStaffMembers', 'invoice', 'consentForm'])
             ->when(Auth::user()->role === 'staff', function ($query) {
                 $query->whereHas('assignedStaffMembers', fn ($staff) => $staff->where('users.id', Auth::id()));
             })
@@ -177,16 +183,33 @@ class AppointmentController extends Controller
                 'email' => $appointment->email,
                 'service_id' => $appointment->service_id,
                 'service_name' => $appointment->service->name ?? 'No service',
-                'service_price' => (float) ($appointment->service->price ?? 0),
+                'service_price' => (float) ($appointment->price_at_booking ?? $appointment->service->price ?? 0),
                 'date' => $appointment->date,
                 'time' => substr((string) $appointment->time, 0, 5),
+                'display_time' => $appointment->formatted_time,
                 'notes' => $appointment->notes,
                 'status' => $appointment->status,
                 'booking_type' => $appointment->booking_type ?? 'online',
                 'assigned_staff_ids' => $appointment->assignedStaffMembers->pluck('id')->values(),
                 'assigned_staff' => $appointment->assigned_staff_names,
                 'payment_status' => $appointment->payment_status ?? 'unpaid',
-                'has_invoice' => (bool) $appointment->invoice,
+                'has_invoice' => (bool) $appointment->billing_invoice || (bool) $appointment->service_package_id,
+                'billing_invoice_id' => $appointment->billing_invoice?->id,
+                'billing_total' => (float) ($appointment->billing_invoice?->grand_total
+                    ?? $appointment->servicePackage?->total_price
+                    ?? $appointment->price_at_booking
+                    ?? 0),
+                'billing_paid' => (float) ($appointment->billing_invoice?->amount_paid ?? 0),
+                'billing_balance' => (float) ($appointment->billing_invoice?->balance
+                    ?? $appointment->servicePackage?->total_price
+                    ?? $appointment->price_at_booking
+                    ?? 0),
+                'package' => $appointment->servicePackage ? [
+                    'id' => $appointment->servicePackage->id,
+                    'total_sessions' => $appointment->servicePackage->total_sessions,
+                    'used_sessions' => $appointment->servicePackage->used_sessions,
+                    'remaining_sessions' => $appointment->servicePackage->remaining_sessions,
+                ] : null,
                 'requires_consent' => (bool) ($appointment->service->requires_consent ?? false),
                 'has_consent' => (bool) $appointment->consentForm,
             ],
@@ -235,6 +258,10 @@ class AppointmentController extends Controller
                     throw new \RuntimeException('PAID_SERVICE_CHANGE_BLOCKED');
                 }
 
+                if ($appointment->service_package_id && (int) $appointment->service_id !== (int) $validated['service_id']) {
+                    throw new \RuntimeException('PACKAGE_SERVICE_CHANGE_BLOCKED');
+                }
+
                 if (
                     $validated['status'] === 'confirmed' &&
                     $appointment->status !== 'confirmed' &&
@@ -254,9 +281,14 @@ class AppointmentController extends Controller
                     'status' => $validated['status'],
                 ]);
 
+                if ((int) $appointment->getOriginal('service_id') !== (int) $validated['service_id']) {
+                    $appointment->price_at_booking = Service::findOrFail($validated['service_id'])->price;
+                }
+
                 $appointment->client_id = $this->resolveClient($validated)->id;
 
                 $appointment->save();
+                $this->syncPackageConsumption($appointment, $oldStatus);
                 $this->syncAssignedStaff($appointment, $validated['status'] === 'cancelled' ? [] : ($validated['assigned_staff_ids'] ?? []));
 
                 return $oldStatus !== 'completed' && $appointment->status === 'completed'
@@ -276,6 +308,8 @@ class AppointmentController extends Controller
             $messages = [
                 'DAILY_CONFIRMED_LIMIT_REACHED' => 'This date already has 10 confirmed clients.',
                 'PAID_SERVICE_CHANGE_BLOCKED' => 'This appointment already has an invoice. Service cannot be changed after payment.',
+                'PACKAGE_SERVICE_CHANGE_BLOCKED' => 'The service cannot be changed because this appointment belongs to a package.',
+                'PACKAGE_SESSIONS_EXHAUSTED' => 'This package has no remaining sessions.',
             ];
 
             return response()->json([
@@ -338,6 +372,7 @@ class AppointmentController extends Controller
                 |--------------------------------------------------------------
                 */
                 $appointment->save();
+                $this->syncPackageConsumption($appointment, $oldStatus);
                 $this->syncAssignedStaff(
                     $appointment,
                     $request->status === 'cancelled' ? [] : $request->input('assigned_staff_ids', [])
@@ -358,6 +393,13 @@ class AppointmentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'This date already has 10 confirmed clients. Ask the client to try another date or walk in.',
+                ], 422);
+            }
+
+            if ($e->getMessage() === 'PACKAGE_SESSIONS_EXHAUSTED') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This package has no remaining sessions.',
                 ], 422);
             }
 
@@ -428,9 +470,15 @@ class AppointmentController extends Controller
             return response()->json([]);
         }
 
-        return response()->json(
+            return response()->json(
             Client::query()
-                ->withCount('appointments')
+                ->with(['servicePackages' => fn ($query) => $query
+                    ->where('status', 'active')
+                    ->whereColumn('used_sessions', '<', 'total_sessions')
+                    ->with('service')])
+                ->withCount(['appointments' => function ($query) {
+                    $query->whereColumn('appointments.full_name', 'clients.full_name');
+                }])
                 ->where(function ($query) use ($search) {
                     $query->where('full_name', 'like', "%{$search}%")
                         ->orWhere('contact_number', 'like', "%{$search}%")
@@ -463,7 +511,8 @@ class AppointmentController extends Controller
             'contact_number' => ['required', 'string', 'max:20', 'regex:/^(\+63|0)9\d{9}$/'],
             'email' => 'nullable|email|max:255',
             'client_id' => 'nullable|integer|exists:clients,id',
-            'service_id' => ['required', Rule::exists('services', 'id')->where('is_active', true)],
+            'service_package_id' => 'nullable|integer|exists:service_packages,id',
+            'service_id' => ['required', 'integer', 'exists:services,id'],
             'date' => 'required|date|after_or_equal:today',
             'time' => 'required|date_format:H:i',
             'assigned_staff_ids' => 'nullable|array',
@@ -476,6 +525,9 @@ class AppointmentController extends Controller
         ]);
 
         $service = Service::findOrFail($validated['service_id']);
+        if (empty($validated['service_package_id']) && ! $service->is_active) {
+            return response()->json(['success' => false, 'message' => 'The selected service is not available.'], 422);
+        }
         if ($service->requires_consent && empty($validated['consent_accepted'])) {
             return response()->json([
                 'success' => false,
@@ -507,11 +559,19 @@ class AppointmentController extends Controller
                     'email' => $validated['email'] ?? null,
                     'client_id' => $client->id,
                     'service_id' => $validated['service_id'],
+                    'price_at_booking' => $service->price,
                     'date' => $validated['date'],
                     'time' => $validated['time'],
                     'status' => 'confirmed',
                     'booking_type' => 'walk-in',
                 ]);
+
+                $this->attachServicePackage(
+                    $appointment,
+                    $service,
+                    $client,
+                    isset($validated['service_package_id']) ? (int) $validated['service_package_id'] : null
+                );
 
                 $this->syncAssignedStaff($appointment, $validated['assigned_staff_ids'] ?? []);
 
@@ -527,6 +587,13 @@ class AppointmentController extends Controller
             ]);
 
         } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'INVALID_SERVICE_PACKAGE') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected package is unavailable or does not belong to this client and service.',
+                ], 422);
+            }
+
             if ($e->getMessage() === 'DAILY_CONFIRMED_LIMIT_REACHED') {
                 return response()->json([
                     'success' => false,
@@ -588,13 +655,16 @@ class AppointmentController extends Controller
         $user = User::query()
             ->where('role', 'customer')
             ->whereIn('phone', array_unique([$contact, $data['contact_number']]))
+            ->where('name', $data['full_name'])
             ->first();
 
         $client = $forceNew
             ? new Client
             : (($clientId ? Client::findOrFail($clientId) : null)
                 ?? ($user?->client)
-                ?? Client::where('contact_number', $contact)->first()
+                ?? Client::where('contact_number', $contact)
+                    ->where('full_name', $data['full_name'])
+                    ->first()
                 ?? new Client);
 
         $client->fill([
@@ -612,6 +682,63 @@ class AppointmentController extends Controller
         $contact = preg_replace('/\s+/', '', $contact);
 
         return str_starts_with($contact, '+63') ? '0'.substr($contact, 3) : $contact;
+    }
+
+    private function attachServicePackage(Appointment $appointment, Service $service, Client $client, ?int $packageId = null): void
+    {
+        if ($packageId) {
+            $package = ServicePackage::lockForUpdate()->findOrFail($packageId);
+            if ($package->client_id !== $client->id
+                || $package->service_id !== $service->id
+                || $package->status !== 'active'
+                || $package->available_sessions < 1) {
+                throw new \RuntimeException('INVALID_SERVICE_PACKAGE');
+            }
+
+            $appointment->update([
+                'service_package_id' => $package->id,
+                'price_at_booking' => 0,
+            ]);
+            return;
+        }
+
+        if ((int) $service->session_count <= 1) {
+            return;
+        }
+
+        $package = ServicePackage::create([
+            'client_id' => $client->id,
+            'service_id' => $service->id,
+            'total_sessions' => $service->session_count,
+            'used_sessions' => 0,
+            'total_price' => $service->price,
+            'status' => 'active',
+        ]);
+
+        $appointment->update(['service_package_id' => $package->id]);
+    }
+
+    private function syncPackageConsumption(Appointment $appointment, string $oldStatus): void
+    {
+        if (! $appointment->service_package_id) {
+            return;
+        }
+
+        $package = ServicePackage::lockForUpdate()->findOrFail($appointment->service_package_id);
+
+        if ($oldStatus !== 'completed' && $appointment->status === 'completed' && ! $appointment->package_session_consumed) {
+            if ($package->remaining_sessions < 1) {
+                throw new \RuntimeException('PACKAGE_SESSIONS_EXHAUSTED');
+            }
+            $package->increment('used_sessions');
+            $appointment->update(['package_session_consumed' => true]);
+        } elseif ($oldStatus === 'completed' && $appointment->status !== 'completed' && $appointment->package_session_consumed) {
+            $package->decrement('used_sessions');
+            $appointment->update(['package_session_consumed' => false]);
+        }
+
+        $package->refresh();
+        $package->update(['status' => $package->remaining_sessions === 0 ? 'completed' : 'active']);
     }
 
     private function syncAssignedStaff(Appointment $appointment, array $userIds): void

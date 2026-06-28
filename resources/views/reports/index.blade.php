@@ -137,23 +137,23 @@
                         <th>Contact</th>
                         <th>Service</th>
                         <th>Payment</th>
-                        <th class="text-right">Amount</th>
+                        <th style="text-align: center">Amount</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--soft-sandstone)]/30">
                     @forelse($salesRows as $appointment)
                     <tr>
-                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $appointment->date }} {{ $appointment->time }}</td>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $appointment->date }} {{ $appointment->formatted_time }}</td>
                         <td class="px-5 py-3.5 text-[var(--ink)]">{{ $appointment->full_name }}</td>
                         <td class="px-5 py-3.5 text-[var(--muted)]">
                             <span class="block">{{ $appointment->contact_number }}</span>
-                            @if($appointment->client_email)
-                            <span class="block text-xs">{{ $appointment->client_email }}</span>
+                            @if($appointment->email)
+                            <span class="block text-xs">{{ $appointment->email }}</span>
                             @endif
                         </td>
                         <td class="px-5 py-3.5 text-[var(--muted)]">{{ $appointment->service->name ?? 'Unavailable' }}</td>
                         <td class="px-5 py-3.5 text-[var(--muted)]">{{ ucfirst($appointment->invoice->payment_method ?? 'unpaid') }}</td>
-                        <td class="px-5 py-3.5 text-right font-bold text-[var(--desert-rock)]">&#8369;{{ number_format($appointment->service->price ?? 0, 2) }}</td>
+                        <td class="px-5 py-3.5 font-bold text-[var(--desert-rock)]" style="text-align: center">&#8369;{{ number_format($appointment->invoice?->amount_paid ?? 0, 2) }}</td>
                     </tr>
                     @empty
                     <tr>

@@ -10,9 +10,10 @@ class ServiceController extends Controller
 {
     public function index()
     {
-        $services = Service::orderBy('name')->get();
+        $services = Service::orderBy('category')->orderBy('name')->get();
+        $categories = $services->pluck('category')->filter()->unique()->values();
 
-        return view('services.index', compact('services'));
+        return view('services.index', compact('services', 'categories'));
     }
 
     public function store(Request $request)
@@ -21,16 +22,20 @@ class ServiceController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'category' => 'required|string|max:100',
             'price' => 'required|numeric|min:0',
-            'duration' => 'required|integer|min:1',
+            'duration' => 'nullable|integer|min:1',
+            'session_count' => 'required|integer|min:1|max:100',
             'description' => 'nullable|string',
             'requires_consent' => 'nullable|boolean',
         ]);
 
         Service::create([
             'name' => $request->name,
+            'category' => $request->category,
             'price' => $request->price,
             'duration' => $request->duration,
+            'session_count' => $request->session_count,
             'description' => $request->description,
             'requires_consent' => $request->boolean('requires_consent'),
             'is_active' => true,
@@ -45,8 +50,10 @@ class ServiceController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'category' => 'required|string|max:100',
             'price' => 'required|numeric|min:0',
-            'duration' => 'required|integer|min:1',
+            'duration' => 'nullable|integer|min:1',
+            'session_count' => 'required|integer|min:1|max:100',
             'description' => 'nullable|string',
             'requires_consent' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
@@ -56,8 +63,10 @@ class ServiceController extends Controller
 
         $service->update([
             'name' => $request->name,
+            'category' => $request->category,
             'price' => $request->price,
             'duration' => $request->duration,
+            'session_count' => $request->session_count,
             'description' => $request->description,
             'requires_consent' => $request->boolean('requires_consent'),
             'is_active' => $request->boolean('is_active'),
@@ -71,10 +80,6 @@ class ServiceController extends Controller
         $this->authorizeAdmin();
 
         $service = Service::findOrFail($id);
-
-        if ($service->appointments()->exists()) {
-            return back()->with('error', 'This service has appointment history and cannot be deleted. Mark it inactive instead.');
-        }
 
         $service->delete();
 

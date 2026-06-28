@@ -234,6 +234,13 @@ thead td {
         <span>PHP {{ number_format($invoice->service_total, 2) }}</span>
     </div>
 
+    @if($invoice->appointment->servicePackage)
+    <div class="row muted">
+        <span>Package sessions</span>
+        <span>{{ $invoice->appointment->servicePackage->used_sessions }} used / {{ $invoice->appointment->servicePackage->total_sessions }} total</span>
+    </div>
+    @endif
+
     <hr class="divider">
 
     <div class="total-box">
@@ -246,7 +253,26 @@ thead td {
             <span>Grand Total</span>
             <span>PHP {{ number_format($invoice->grand_total, 2) }}</span>
         </div>
+        <div class="row">
+            <span>Amount Paid</span>
+            <span>PHP {{ number_format($invoice->amount_paid, 2) }}</span>
+        </div>
+        <div class="row total-row">
+            <span>Balance</span>
+            <span>PHP {{ number_format($invoice->balance, 2) }}</span>
+        </div>
     </div>
+
+    @if($invoice->payments->isNotEmpty())
+    <hr class="divider">
+    <div class="section-title">Payment History</div>
+    @foreach($invoice->payments as $payment)
+        <div class="row">
+            <span>{{ $payment->created_at->format('M d, Y g:i A') }} &middot; {{ ucfirst($payment->payment_method) }}</span>
+            <span>PHP {{ number_format($payment->amount, 2) }}</span>
+        </div>
+    @endforeach
+    @endif
 
     @if($invoice->notes)
     <hr class="divider">
