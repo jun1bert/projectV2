@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentPaymentController;
+use App\Http\Controllers\CustomerBookingController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProfileController;
@@ -30,6 +31,10 @@ Route::get('/dashboard', [AppointmentController::class, 'dashboard'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+Route::get('/my-bookings', [CustomerBookingController::class, 'index'])
+    ->middleware(['auth', 'verified', 'role:customer'])
+    ->name('customer.bookings.index');
+
 /*
 |--------------------------------------------------------------------------
 | APPOINTMENTS (CUSTOMER)
@@ -51,6 +56,9 @@ Route::middleware(['auth', 'role:admin,staff,reception,management'])->group(func
 
     Route::get('/appointments/{id}/consent/signature', [AppointmentController::class, 'consentSignature'])
         ->name('appointments.consent.signature');
+
+    Route::post('/appointments/{id}/consent', [AppointmentController::class, 'storeConsent'])
+        ->name('appointments.consent.store');
 
     Route::get('/appointments/{id}', [AppointmentController::class, 'show'])
         ->name('appointments.show');

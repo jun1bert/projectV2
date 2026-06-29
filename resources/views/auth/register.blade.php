@@ -70,7 +70,7 @@ h1 {
         <div class="auth-card rounded-2xl p-6 sm:p-8">
             <div class="mb-6 text-center">
                 <h1 class="text-3xl font-semibold text-[var(--ink)]">Create Account</h1>
-                <p class="mt-2 text-sm text-[var(--muted)]">Join the spa management system.</p>
+                <p class="mt-2 text-sm text-[var(--muted)]">Join the management system.</p>
                 <div class="mx-auto mt-4 h-0.5 w-14 rounded-full bg-[var(--desert-rock)]"></div>
             </div>
 

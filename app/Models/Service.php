@@ -30,4 +30,9 @@ class Service extends Model
     {
         return $this->hasMany(Appointment::class);
     }
+
+    public function bookedAppointments()
+    {
+        return $this->belongsToMany(Appointment::class)->withPivot('price_at_booking')->withTimestamps();
+    }
 }

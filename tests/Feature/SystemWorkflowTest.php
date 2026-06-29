@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Appointment;
+use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Service;
 use App\Models\User;
@@ -97,6 +98,51 @@ it('allows an online client booking to be confirmed by reception', function () {
         ->assertJson(['success' => true]);
 
     expect($appointment->fresh()->status)->toBe('confirmed');
+});
+
+it('sends customers to a private booking portal instead of the overview', function () {
+    $service = systemService();
+    $otherService = systemService(['name' => 'Other Customer Service']);
+    $customer = systemUser('customer');
+    $client = Client::create([
+        'user_id' => $customer->id,
+        'full_name' => $customer->name,
+        'contact_number' => '09178880000',
+        'email' => $customer->email,
+    ]);
+
+    Appointment::create([
+        'full_name' => $customer->name,
+        'contact_number' => $client->contact_number,
+        'client_id' => $client->id,
+        'service_id' => $service->id,
+        'price_at_booking' => $service->price,
+        'date' => now()->addDay()->toDateString(),
+        'time' => '09:00',
+        'status' => 'pending',
+        'booking_type' => 'online',
+    ]);
+
+    Appointment::create([
+        'full_name' => 'Another Customer',
+        'contact_number' => '09179990000',
+        'service_id' => $otherService->id,
+        'price_at_booking' => $otherService->price,
+        'date' => now()->addDay()->toDateString(),
+        'time' => '10:00',
+        'status' => 'pending',
+        'booking_type' => 'online',
+    ]);
+
+    $this->actingAs($customer)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('customer.bookings.index'));
+
+    $this->actingAs($customer)
+        ->get(route('customer.bookings.index'))
+        ->assertOk()
+        ->assertSee($service->name)
+        ->assertDontSee('Another Customer');
 });
 
 it('keeps clients with the same name but different contact numbers separate', function () {

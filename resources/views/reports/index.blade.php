@@ -151,7 +151,7 @@
                             <span class="block text-xs">{{ $appointment->email }}</span>
                             @endif
                         </td>
-                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $appointment->service->name ?? 'Unavailable' }}</td>
+                        <td class="px-5 py-3.5 text-[var(--muted)]">{{ $appointment->service_names }}</td>
                         <td class="px-5 py-3.5 text-[var(--muted)]">{{ ucfirst($appointment->invoice->payment_method ?? 'unpaid') }}</td>
                         <td class="px-5 py-3.5 font-bold text-[var(--desert-rock)]" style="text-align: center">&#8369;{{ number_format($appointment->invoice?->amount_paid ?? 0, 2) }}</td>
                     </tr>

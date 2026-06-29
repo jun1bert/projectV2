@@ -47,15 +47,28 @@ class AppointmentController extends Controller
     */
     public function store(Request $request)
     {
+        $participantServiceIds = collect($request->input('participants', []))->pluck('service_ids')->flatten()->filter()->unique()->values()->all();
         $request->merge([
             'contact_number' => preg_replace('/\s+/', '', (string) $request->input('contact_number')),
+            'service_ids' => $request->input('service_ids', $participantServiceIds ?: ($request->filled('service_id') ? [$request->input('service_id')] : [])),
+            'party_size' => count($request->input('participants', [])) ?: $request->input('party_size', 1),
         ]);
+
+        if ($request->filled('service_id') && ! Service::whereKey($request->input('service_id'))->where('is_active', true)->exists()) {
+            return back()->withInput()->withErrors(['service_id' => 'The selected service is not available.']);
+        }
 
         $validated = $request->validate([
             'full_name' => 'required|string|min:2|max:255',
             'contact_number' => ['required', 'string', 'max:20', 'regex:/^(\+63|0)9\d{9}$/'],
             'email' => 'nullable|email|max:255',
-            'service_id' => ['required', Rule::exists('services', 'id')->where('is_active', true)],
+            'party_size' => 'required|integer|min:1|max:50',
+            'service_ids' => 'required|array|min:1',
+            'service_ids.*' => ['integer', 'distinct', Rule::exists('services', 'id')->where('is_active', true)],
+            'participants' => 'nullable|array|min:1|max:50',
+            'participants.*.name' => 'nullable|string|max:255',
+            'participants.*.service_ids' => 'required_with:participants|array|min:1',
+            'participants.*.service_ids.*' => ['integer', Rule::exists('services', 'id')->where('is_active', true)],
             'date' => 'required|date|after_or_equal:today',
             'time' => 'required|date_format:H:i',
             'notes' => 'nullable|string|max:1000',
@@ -66,21 +79,14 @@ class AppointmentController extends Controller
             'date.after_or_equal' => 'Please choose today or a future date.',
         ]);
 
-        $service = empty($validated['service_package_id'])
-            ? Service::findOrFail($validated['service_id'])
-            : Service::withTrashed()->findOrFail($validated['service_id']);
-        if ($service->requires_consent && empty($validated['consent_accepted'])) {
-            return back()
-                ->withInput()
-                ->withErrors(['consent_accepted' => 'Please read and accept the consent form for this service.']);
+        $services = Service::whereIn('id', $validated['service_ids'])->get();
+        $service = $services->first();
+        if ($services->contains(fn ($item) => (int) $item->session_count > 1)
+            && ($services->count() > 1 || $validated['party_size'] > 1)) {
+            return back()->withInput()->withErrors([
+                'service_ids' => 'A multi-session package must be booked alone for one client.',
+            ]);
         }
-
-        if ($service->requires_consent && empty($validated['consent_signature'])) {
-            return back()
-                ->withInput()
-                ->withErrors(['consent_signature' => 'Please sign the consent form for this service.']);
-        }
-
         if ($this->confirmedCountForDate($validated['date']) >= self::DAILY_CONFIRMED_LIMIT) {
             return back()
                 ->withInput()
@@ -95,28 +101,34 @@ class AppointmentController extends Controller
                 ->withErrors(['time' => 'Please choose one of the available online appointment times.']);
         }
 
-        DB::transaction(function () use ($validated, $service) {
+        DB::transaction(function () use ($validated, $service, $services) {
             $client = $this->resolveClient($validated);
             $appointment = Appointment::create([
                 'full_name' => $validated['full_name'],
                 'contact_number' => $validated['contact_number'],
                 'email' => $validated['email'] ?? null,
+                'party_size' => $validated['party_size'],
                 'client_id' => $client->id,
-                'service_id' => $validated['service_id'],
-                'price_at_booking' => $service->price,
+                'service_id' => $service->id,
+                'price_at_booking' => $this->participantBookingTotal($validated, $services),
                 'date' => $validated['date'],
                 'time' => $validated['time'],
                 'notes' => $validated['notes'] ?? null,
                 'status' => 'pending',
             ]);
 
+            $this->syncAppointmentServices($appointment, $services);
+            $this->syncAppointmentParticipants($appointment, $validated, $services);
+
             $this->attachServicePackage($appointment, $service, $client);
 
-            $this->storeConsentIfRequired($appointment, $service, $validated['consent_signature'] ?? null);
         });
 
-        return redirect('/#book')
-            ->with('success', 'Appointment submitted successfully!');
+        $destination = Auth::check() && Auth::user()->role === 'customer'
+            ? route('customer.bookings.index')
+            : '/#book';
+
+        return redirect($destination)->with('success', 'Appointment submitted successfully!');
     }
 
     /*
@@ -127,6 +139,10 @@ class AppointmentController extends Controller
     public function dashboard()
     {
         $user = Auth::user();
+        if ($user->role === 'customer') {
+            return redirect()->route('customer.bookings.index');
+        }
+
         $query = Appointment::query();
 
         if (in_array($user->role, ['admin', 'management', 'reception'])) {
@@ -154,7 +170,7 @@ class AppointmentController extends Controller
             abort(403);
         }
 
-        $appointments = Appointment::with(['service', 'servicePackage', 'assignedStaffMembers', 'invoice', 'consentForm'])
+        $appointments = Appointment::with(['service', 'services', 'participants.services', 'participants.payments', 'servicePackage', 'assignedStaffMembers', 'invoice.payments', 'consentForm'])
             ->when(Auth::user()->role === 'staff', function ($query) {
                 $query->whereHas('assignedStaffMembers', fn ($staff) => $staff->where('users.id', Auth::id()));
             })
@@ -181,9 +197,21 @@ class AppointmentController extends Controller
                 'full_name' => $appointment->full_name,
                 'contact_number' => $appointment->contact_number,
                 'email' => $appointment->email,
+                'party_size' => $appointment->party_size,
+                'per_client_total' => $appointment->per_client_total,
+                'clients_paid' => (int) ($appointment->billing_invoice?->payments
+                    ?->where('payment_scope', 'per_client')->sum('client_count') ?? 0),
+                'participants' => $appointment->participants->map(fn ($participant) => [
+                    'id' => $participant->id,
+                    'name' => $participant->display_name,
+                    'services' => $participant->services->pluck('name')->join(', '),
+                    'total' => $participant->total,
+                    'paid' => (float) $participant->payments->sum(fn ($payment) => (float) $payment->pivot->amount),
+                ])->values(),
                 'service_id' => $appointment->service_id,
-                'service_name' => $appointment->service->name ?? 'No service',
-                'service_price' => (float) ($appointment->price_at_booking ?? $appointment->service->price ?? 0),
+                'service_ids' => $appointment->services->pluck('id')->values(),
+                'service_name' => $appointment->service_names,
+                'service_price' => $appointment->services_total,
                 'date' => $appointment->date,
                 'time' => substr((string) $appointment->time, 0, 5),
                 'display_time' => $appointment->formatted_time,
@@ -210,7 +238,7 @@ class AppointmentController extends Controller
                     'used_sessions' => $appointment->servicePackage->used_sessions,
                     'remaining_sessions' => $appointment->servicePackage->remaining_sessions,
                 ] : null,
-                'requires_consent' => (bool) ($appointment->service->requires_consent ?? false),
+                'requires_consent' => $appointment->services->contains('requires_consent', true),
                 'has_consent' => (bool) $appointment->consentForm,
             ],
         ]);
@@ -228,13 +256,17 @@ class AppointmentController extends Controller
 
         $request->merge([
             'contact_number' => preg_replace('/\s+/', '', (string) $request->input('contact_number')),
+            'service_ids' => $request->input('service_ids', $request->filled('service_id') ? [$request->input('service_id')] : []),
+            'party_size' => $request->input('party_size', 1),
         ]);
 
         $validated = $request->validate([
             'full_name' => 'required|string|min:2|max:255',
             'contact_number' => ['required', 'string', 'max:20', 'regex:/^(\+63|0)9\d{9}$/'],
             'email' => 'nullable|email|max:255',
-            'service_id' => 'required|exists:services,id',
+            'party_size' => 'required|integer|min:1|max:50',
+            'service_ids' => 'required|array|min:1',
+            'service_ids.*' => 'integer|distinct|exists:services,id',
             'date' => 'required|date',
             'time' => 'required|date_format:H:i',
             'notes' => 'nullable|string|max:1000',
@@ -251,14 +283,19 @@ class AppointmentController extends Controller
 
         try {
             $completedAppointment = DB::transaction(function () use ($id, $validated) {
-                $appointment = Appointment::with('invoice')->findOrFail($id);
+                $appointment = Appointment::with(['invoice', 'services', 'consentForm'])->findOrFail($id);
                 $oldStatus = $appointment->status;
+                $serviceIds = collect($validated['service_ids'])->map(fn ($id) => (int) $id)->sort()->values();
+                $oldServiceIds = $appointment->services->pluck('id')->map(fn ($id) => (int) $id)->sort()->values();
+                if ($validated['status'] === 'completed' && $appointment->services->contains('requires_consent', true) && ! $appointment->consentForm) {
+                    throw new \RuntimeException('CONSENT_REQUIRED');
+                }
 
-                if ($appointment->invoice && (int) $appointment->service_id !== (int) $validated['service_id']) {
+                if ($appointment->invoice && $oldServiceIds->all() !== $serviceIds->all()) {
                     throw new \RuntimeException('PAID_SERVICE_CHANGE_BLOCKED');
                 }
 
-                if ($appointment->service_package_id && (int) $appointment->service_id !== (int) $validated['service_id']) {
+                if ($appointment->service_package_id && ($serviceIds->count() !== 1 || $validated['party_size'] > 1 || (int) $appointment->service_id !== $serviceIds->first())) {
                     throw new \RuntimeException('PACKAGE_SERVICE_CHANGE_BLOCKED');
                 }
 
@@ -270,29 +307,33 @@ class AppointmentController extends Controller
                     throw new \RuntimeException('DAILY_CONFIRMED_LIMIT_REACHED');
                 }
 
+                $services = Service::whereIn('id', $serviceIds)->get();
                 $appointment->fill([
                     'full_name' => $validated['full_name'],
                     'contact_number' => $validated['contact_number'],
                     'email' => $validated['email'] ?? null,
-                    'service_id' => $validated['service_id'],
+                    'party_size' => $validated['party_size'],
+                    'service_id' => $serviceIds->first(),
                     'date' => $validated['date'],
                     'time' => $validated['time'],
                     'notes' => $validated['notes'] ?? null,
                     'status' => $validated['status'],
                 ]);
 
-                if ((int) $appointment->getOriginal('service_id') !== (int) $validated['service_id']) {
-                    $appointment->price_at_booking = Service::findOrFail($validated['service_id'])->price;
-                }
+                $appointment->price_at_booking = $services->sum('price') * $validated['party_size'];
 
                 $appointment->client_id = $this->resolveClient($validated)->id;
 
                 $appointment->save();
+                $this->syncAppointmentServices($appointment, $services);
+                if (! $appointment->invoice) {
+                    $this->syncAppointmentParticipants($appointment, $validated, $services);
+                }
                 $this->syncPackageConsumption($appointment, $oldStatus);
                 $this->syncAssignedStaff($appointment, $validated['status'] === 'cancelled' ? [] : ($validated['assigned_staff_ids'] ?? []));
 
                 return $oldStatus !== 'completed' && $appointment->status === 'completed'
-                    ? $appointment->fresh(['service'])
+                    ? $appointment->fresh(['service', 'services'])
                     : null;
             });
 
@@ -310,6 +351,7 @@ class AppointmentController extends Controller
                 'PAID_SERVICE_CHANGE_BLOCKED' => 'This appointment already has an invoice. Service cannot be changed after payment.',
                 'PACKAGE_SERVICE_CHANGE_BLOCKED' => 'The service cannot be changed because this appointment belongs to a package.',
                 'PACKAGE_SESSIONS_EXHAUSTED' => 'This package has no remaining sessions.',
+                'CONSENT_REQUIRED' => 'Client consent must be signed at the store before completing this appointment.',
             ];
 
             return response()->json([
@@ -353,8 +395,12 @@ class AppointmentController extends Controller
         try {
             [$appointment, $shouldNotifyCompletion] = DB::transaction(function () use ($request, $id) {
 
-                $appointment = Appointment::findOrFail($id);
+                $appointment = Appointment::with(['services', 'consentForm'])->findOrFail($id);
                 $oldStatus = $appointment->status;
+
+                if ($request->status === 'completed' && $appointment->services->contains('requires_consent', true) && ! $appointment->consentForm) {
+                    throw new \RuntimeException('CONSENT_REQUIRED');
+                }
 
                 if (
                     $request->status === 'confirmed' &&
@@ -400,6 +446,13 @@ class AppointmentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'This package has no remaining sessions.',
+                ], 422);
+            }
+
+            if ($e->getMessage() === 'CONSENT_REQUIRED') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Client consent must be signed at the store before completing this appointment.',
                 ], 422);
             }
 
@@ -463,6 +516,27 @@ class AppointmentController extends Controller
         return Storage::disk('public')->response($path);
     }
 
+    public function storeConsent(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'consent_accepted' => 'accepted',
+            'consent_signature' => 'required|string|max:3000000',
+        ]);
+        $appointment = Appointment::with(['services', 'consentForm'])->findOrFail($id);
+        $this->authorizeAppointmentAccess($appointment);
+        if ($appointment->consentForm) {
+            return response()->json(['success' => false, 'message' => 'Consent has already been signed.'], 422);
+        }
+        $service = $appointment->services->firstWhere('requires_consent', true);
+        if (! $service) {
+            return response()->json(['success' => false, 'message' => 'This appointment does not require consent.'], 422);
+        }
+
+        $this->storeConsentIfRequired($appointment, $service, $validated['consent_signature']);
+
+        return response()->json(['success' => true, 'message' => 'Consent saved successfully.']);
+    }
+
     public function searchClients(Request $request)
     {
         $search = trim(str_replace(['%', '_'], '', (string) $request->query('q')));
@@ -504,15 +578,19 @@ class AppointmentController extends Controller
 
         $request->merge([
             'contact_number' => preg_replace('/\s+/', '', (string) $request->input('contact_number')),
+            'service_ids' => $request->input('service_ids', $request->filled('service_id') ? [$request->input('service_id')] : []),
+            'party_size' => $request->input('party_size', 1),
         ]);
 
         $validated = $request->validate([
             'full_name' => 'required|string|min:2|max:255',
             'contact_number' => ['required', 'string', 'max:20', 'regex:/^(\+63|0)9\d{9}$/'],
             'email' => 'nullable|email|max:255',
+            'party_size' => 'required|integer|min:1|max:50',
             'client_id' => 'nullable|integer|exists:clients,id',
             'service_package_id' => 'nullable|integer|exists:service_packages,id',
-            'service_id' => ['required', 'integer', 'exists:services,id'],
+            'service_ids' => 'required|array|min:1',
+            'service_ids.*' => 'integer|distinct|exists:services,id',
             'date' => 'required|date|after_or_equal:today',
             'time' => 'required|date_format:H:i',
             'assigned_staff_ids' => 'nullable|array',
@@ -524,18 +602,27 @@ class AppointmentController extends Controller
             'date.after_or_equal' => 'Please choose today or a future date.',
         ]);
 
-        $service = Service::findOrFail($validated['service_id']);
-        if (empty($validated['service_package_id']) && ! $service->is_active) {
+        $services = Service::whereIn('id', $validated['service_ids'])->get();
+        $service = $services->first();
+        $consentService = $services->firstWhere('requires_consent', true);
+        if (! empty($validated['service_package_id']) && ($services->count() > 1 || $validated['party_size'] > 1)) {
+            return response()->json(['success' => false, 'message' => 'A service package can only be used for one client and one service.'], 422);
+        }
+        if (empty($validated['service_package_id']) && $services->contains(fn ($item) => ! $item->is_active)) {
             return response()->json(['success' => false, 'message' => 'The selected service is not available.'], 422);
         }
-        if ($service->requires_consent && empty($validated['consent_accepted'])) {
+        if ($services->contains(fn ($item) => (int) $item->session_count > 1)
+            && ($services->count() > 1 || $validated['party_size'] > 1)) {
+            return response()->json(['success' => false, 'message' => 'A multi-session package must be booked alone for one client.'], 422);
+        }
+        if ($consentService && empty($validated['consent_accepted'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please ask the client to read and accept the consent form for this service.',
             ], 422);
         }
 
-        if ($service->requires_consent && empty($validated['consent_signature'])) {
+        if ($consentService && empty($validated['consent_signature'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please ask the client to sign the consent form for this service.',
@@ -547,7 +634,7 @@ class AppointmentController extends Controller
         }
 
         try {
-            $appointment = DB::transaction(function () use ($validated, $service) {
+            $appointment = DB::transaction(function () use ($validated, $service, $services, $consentService) {
                 $client = $this->resolveClient(
                     $validated,
                     $validated['client_id'] ?? null,
@@ -557,14 +644,18 @@ class AppointmentController extends Controller
                     'full_name' => $validated['full_name'],
                     'contact_number' => $validated['contact_number'],
                     'email' => $validated['email'] ?? null,
+                    'party_size' => $validated['party_size'],
                     'client_id' => $client->id,
-                    'service_id' => $validated['service_id'],
-                    'price_at_booking' => $service->price,
+                    'service_id' => $service->id,
+                    'price_at_booking' => $services->sum('price') * $validated['party_size'],
                     'date' => $validated['date'],
                     'time' => $validated['time'],
                     'status' => 'confirmed',
                     'booking_type' => 'walk-in',
                 ]);
+
+                $this->syncAppointmentServices($appointment, $services);
+                $this->syncAppointmentParticipants($appointment, $validated, $services);
 
                 $this->attachServicePackage(
                     $appointment,
@@ -575,7 +666,9 @@ class AppointmentController extends Controller
 
                 $this->syncAssignedStaff($appointment, $validated['assigned_staff_ids'] ?? []);
 
-                $this->storeConsentIfRequired($appointment, $service, $validated['consent_signature'] ?? null);
+                if ($consentService) {
+                    $this->storeConsentIfRequired($appointment, $consentService, $validated['consent_signature'] ?? null);
+                }
 
                 return $appointment;
             });
@@ -745,6 +838,47 @@ class AppointmentController extends Controller
     {
         $userIds = array_values(array_unique(array_map('intval', $userIds)));
         $appointment->assignedStaffMembers()->sync($userIds);
+    }
+
+    private function syncAppointmentServices(Appointment $appointment, $services): void
+    {
+        $appointment->services()->sync($services->mapWithKeys(fn ($service) => [
+            $service->id => ['price_at_booking' => $service->price],
+        ])->all());
+    }
+
+    private function participantBookingTotal(array $validated, $services): float
+    {
+        $prices = $services->pluck('price', 'id');
+        if (! empty($validated['participants'])) {
+            return (float) collect($validated['participants'])->sum(fn ($participant) =>
+                collect($participant['service_ids'])->unique()->sum(fn ($id) => (float) ($prices[(int) $id] ?? 0))
+            );
+        }
+
+        return (float) $services->sum('price') * max(1, (int) $validated['party_size']);
+    }
+
+    private function syncAppointmentParticipants(Appointment $appointment, array $validated, $services): void
+    {
+        $participants = ! empty($validated['participants'])
+            ? collect($validated['participants'])->values()
+            : collect(range(1, max(1, (int) $validated['party_size'])))->map(fn ($position) => [
+                'name' => $position === 1 ? $validated['full_name'] : null,
+                'service_ids' => $services->pluck('id')->all(),
+            ]);
+        $prices = $services->pluck('price', 'id');
+
+        $appointment->participants()->delete();
+        foreach ($participants as $index => $data) {
+            $participant = $appointment->participants()->create([
+                'name' => filled($data['name'] ?? null) ? $data['name'] : ($index === 0 ? $validated['full_name'] : null),
+                'position' => $index + 1,
+            ]);
+            $participant->services()->sync(collect($data['service_ids'])->unique()->mapWithKeys(fn ($id) => [
+                (int) $id => ['price_at_booking' => $prices[(int) $id]],
+            ])->all());
+        }
     }
 
     private function storeConsentIfRequired(Appointment $appointment, Service $service, ?string $signatureData): void

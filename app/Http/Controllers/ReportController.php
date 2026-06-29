@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Invoice;
+use App\Models\Service;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class ReportController extends Controller
         $search = trim((string) $request->query('search', ''));
         $status = $request->query('status', 'completed');
 
-        $appointmentsQuery = Appointment::with(['client', 'service', 'assignedStaffMembers', 'invoice'])
+        $appointmentsQuery = Appointment::with(['client', 'service', 'services', 'assignedStaffMembers', 'invoice'])
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($search !== '', function ($query) use ($search) {
@@ -94,7 +95,7 @@ class ReportController extends Controller
                     return [
                         'date' => $appointment->date,
                         'time' => $appointment->formatted_time,
-                        'service' => $appointment->service->name ?? 'No service',
+                        'service' => $appointment->service_names,
                         'staff' => $appointment->assigned_staff_names,
                         'status' => $appointment->status,
                         'payment_status' => str_replace('_', ' ', $appointment->payment_status ?? 'unpaid'),
@@ -143,15 +144,15 @@ class ReportController extends Controller
             ->whereHas('appointment', fn ($query) => $query->whereBetween('date', [$dateFrom, $dateTo]))
             ->sum('amount_paid');
 
-        $topServices = Appointment::selectRaw('service_id, COUNT(*) as total')
-            ->whereBetween('date', [$dateFrom, $dateTo])
-            ->groupBy('service_id')
+        $topServices = Service::withCount(['bookedAppointments as total' => fn ($query) =>
+                $query->whereBetween('date', [$dateFrom, $dateTo])
+            ])
             ->orderByDesc('total')
-            ->with('service')
             ->limit(10)
-            ->get();
+            ->get()
+            ->map(fn ($service) => (object) ['service' => $service, 'total' => $service->total]);
 
-        $appointments = Appointment::with(['client', 'service', 'assignedStaffMembers', 'invoice'])
+        $appointments = Appointment::with(['client', 'service', 'services', 'assignedStaffMembers', 'invoice'])
             ->whereBetween('date', [$dateFrom, $dateTo])
             ->orderBy('date')
             ->orderBy('time')

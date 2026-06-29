@@ -9,7 +9,7 @@ class InvoiceController extends Controller
 {
     public function receipt($id)
     {
-        $invoice = Invoice::with(['appointment.service', 'appointment.servicePackage', 'payments.receiver'])->findOrFail($id);
+        $invoice = Invoice::with(['appointment.service', 'appointment.services', 'appointment.participants.services', 'appointment.servicePackage', 'payments.receiver', 'payments.participants'])->findOrFail($id);
 
         // Staff can only view receipts for appointments they're assigned to;
         // admin, management, and reception can view any.

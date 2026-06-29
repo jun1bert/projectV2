@@ -151,7 +151,7 @@
                     <tbody class="divide-y divide-[rgba(164,141,120,.12)]">
                         @foreach($customer['services'] as $appointment)
                         <tr>
-                            <td class="px-5 py-3 font-medium text-[var(--ink)]">{{ $appointment->service->name ?? 'No service' }}</td>
+                            <td class="px-5 py-3 font-medium text-[var(--ink)]">{{ $appointment->service_names }}</td>
                             <td class="px-5 py-3 text-[var(--muted)]">{{ $appointment->date }} at {{ $appointment->formatted_time }}</td>
                             <td class="px-5 py-3 text-[var(--muted)]">{{ $appointment->assigned_staff_names }}</td>
                             <td class="px-5 py-3">
@@ -159,7 +159,7 @@
                                     {{ $appointment->status }}
                                 </span>
                             </td>
-                            <td class="px-5 py-3 text-right font-semibold text-[var(--desert-rock)]">PHP {{ number_format($appointment->invoice?->grand_total ?? $appointment->price_at_booking ?? $appointment->service?->price ?? 0, 2) }}</td>
+                            <td class="px-5 py-3 text-right font-semibold text-[var(--desert-rock)]">PHP {{ number_format($appointment->invoice?->grand_total ?? $appointment->services_total, 2) }}</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -171,10 +171,10 @@
                 <div class="p-4">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="font-semibold text-[var(--ink)]">{{ $appointment->service->name ?? 'No service' }}</p>
+                            <p class="font-semibold text-[var(--ink)]">{{ $appointment->service_names }}</p>
                             <p class="mt-1 text-xs text-[var(--muted)]">{{ $appointment->date }} at {{ $appointment->formatted_time }}</p>
                         </div>
-                        <span class="text-right text-sm font-semibold text-[var(--desert-rock)]">PHP {{ number_format($appointment->invoice?->grand_total ?? $appointment->price_at_booking ?? $appointment->service?->price ?? 0, 2) }}</span>
+                        <span class="text-right text-sm font-semibold text-[var(--desert-rock)]">PHP {{ number_format($appointment->invoice?->grand_total ?? $appointment->services_total, 2) }}</span>
                     </div>
                     <p class="mt-2 text-xs text-[var(--muted)]">Staff: {{ $appointment->assigned_staff_names }}</p>
                     <span class="mt-3 inline-flex rounded-full bg-[rgba(230,218,200,.5)] px-2.5 py-1 text-xs font-semibold capitalize text-[var(--ink)]">

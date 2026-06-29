@@ -118,6 +118,8 @@
         }
 
         .form-field {
+            min-width: 0;
+            max-width: 100%;
             background: rgba(250,249,246,.92);
             border: 1px solid rgba(164,141,120,.28);
             color: var(--ink);
@@ -162,6 +164,18 @@
 
         .field-hint.error  { color: #c0392b; }
         .field-hint.ok     { color: #5a7a5a; }
+
+        .service-choice:has(input:checked) {
+            border-color: var(--desert-rock);
+            background: rgba(230,218,200,.52);
+            box-shadow: 0 0 0 3px rgba(164,141,120,.14);
+        }
+
+        .booking-type-button[aria-pressed="true"] {
+            background: var(--desert-rock);
+            color: white;
+            border-color: var(--desert-rock);
+        }
 
         .gallery-card { cursor: zoom-in; }
 
@@ -224,7 +238,7 @@
 
 {{-- Hero --}}
 @php
-    $heroImage = asset('images/image8.jpeg');
+    $heroImage = asset('images/image14.jpeg');
 @endphp
 <section class="hero-media relative min-h-[92vh] px-4 pt-28 sm:pt-32"
          style="--hero-image: url('{{ $heroImage }}');">
@@ -283,7 +297,7 @@
             ['src' => asset('images/image9.jpeg'), 'alt' => 'Martinis and Manicures reception and refreshment bar'],
             ['src' => asset('images/image12.jpeg'), 'alt' => 'Pedicure lounge with reclining chairs'],
             ['src' => asset('images/image6.jpeg'), 'alt' => 'Private body care treatment room'],
-            ['src' => asset('images/image14.jpeg'), 'alt' => 'Private treatment corridor at Martinis and Manicures'],
+            ['src' => asset('images/image10.jpeg'), 'alt' => 'Private treatment corridor at Martinis and Manicures'],
         ] as $photo)
             <img src="{{ $photo['src'] }}"
                  alt="{{ $photo['alt'] }}"
@@ -531,8 +545,8 @@
 
 {{-- Booking --}}
 <section id="book" class="section-band px-4 py-20 pb-28">
-    <div class="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-        <aside class="warm-panel rounded-2xl p-6 sm:p-8">
+    <div class="mx-auto grid min-w-0 max-w-6xl gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+        <aside class="warm-panel min-w-0 rounded-2xl p-5 sm:p-8">
             <p class="text-xs font-bold uppercase tracking-[.22em] text-[var(--desert-rock)]">Reservations</p>
             <h2 class="mt-4 text-3xl">Reserve Your Experience</h2>
             <p class="mt-4 text-sm leading-7 text-[var(--muted)]">
@@ -545,7 +559,7 @@
             </div>
         </aside>
 
-        <div class="glass rounded-2xl p-6 sm:p-8">
+        <div class="glass min-w-0 overflow-hidden rounded-2xl p-4 sm:p-8">
 
         <h2 class="text-2xl text-center mb-2">Appointment Request</h2>
         <p class="text-center text-[var(--muted)] text-sm mb-8">Fill out the details below and confirm before sending.</p>
@@ -567,8 +581,16 @@
             </div>
         @endif
 
-        <form id="bookingForm" method="POST" action="{{ route('appointments.store') }}" class="space-y-5" novalidate>
+        <form id="bookingForm" method="POST" action="{{ route('appointments.store') }}" class="min-w-0 space-y-5" autocomplete="off" novalidate>
             @csrf
+
+            <div class="mb-6">
+                <div class="flex items-center justify-between text-[11px] font-semibold text-[var(--muted)]"><span>Details</span><span>Clients</span><span>Schedule</span><span>Review</span></div>
+                <div class="mt-2 h-2 overflow-hidden rounded-full bg-[var(--creamed-oat)]"><div id="bookingStepProgress" class="h-full w-1/4 rounded-full bg-[var(--desert-rock)] transition-all duration-300"></div></div>
+                <p id="bookingStepTitle" class="mt-4 text-center text-sm font-semibold text-[var(--ink)]">Step 1 of 4 — Your details</p>
+            </div>
+
+            <div data-booking-step="1" class="space-y-5">
 
             <div class="grid gap-4 sm:grid-cols-2">
                 {{-- Full name --}}
@@ -593,7 +615,7 @@
             </div>
 
             {{-- Email --}}
-            <div>
+            <div class="min-w-0">
                 <input type="email" id="field_email" name="email"
                        placeholder="Email Address (optional)"
                        value="{{ old('email') }}"
@@ -601,33 +623,94 @@
                        autocomplete="email">
                 <p id="hint_email" class="field-hint hidden"></p>
             </div>
+            </div>
 
             {{-- Service --}}
             @php
-                $oldService = $services->firstWhere('id', (int) old('service_id'));
+                $oldParticipants = collect(old('participants', []));
+                $oldServiceIds = $oldParticipants->isNotEmpty()
+                    ? $oldParticipants->pluck('service_ids')->flatten()->map(fn ($id) => (int) $id)
+                    : collect(old('service_ids', old('service_id') ? [old('service_id')] : []))->map(fn ($id) => (int) $id);
+                $firstServiceIds = collect($oldParticipants->first()['service_ids'] ?? $oldServiceIds)->map(fn ($id) => (int) $id);
+                $oldService = $services->firstWhere('id', $oldServiceIds->first());
+                $bookingServiceCatalog = $services->map(fn ($service) => [
+                    'id' => $service->id,
+                    'name' => $service->name,
+                    'category' => $service->category,
+                    'price' => (float) $service->price,
+                    'session_count' => (int) $service->session_count,
+                ])->values();
             @endphp
-            <div>
-                <select id="field_service_category" class="form-field mb-3 w-full rounded-xl p-4">
+            <div data-booking-step="2" class="hidden flex flex-col gap-5">
+            <div class="order-2 min-w-0">
+                <select id="field_service_category" class="hidden" aria-hidden="true">
                     <option value="">Select Service Category</option>
                     @foreach($services->pluck('category')->unique() as $category)
                         <option value="{{ $category }}" {{ $oldService?->category === $category ? 'selected' : '' }}>{{ $category }}</option>
                     @endforeach
                 </select>
-                <select id="field_service" name="service_id" class="form-field w-full p-4 rounded-xl">
-                    <option value="">Select a category first</option>
+                <p class="mb-2 text-sm font-semibold text-[var(--ink)]">2. Choose a category</p>
+                <div id="serviceCategoryFilters" class="mb-4 flex max-w-full flex-wrap gap-2">
+                    <button type="button" data-service-filter="all" class="service-filter shrink-0 rounded-full border border-[var(--desert-rock)] bg-[var(--desert-rock)] px-4 py-2 text-xs font-semibold text-white">All</button>
+                    @foreach($services->pluck('category')->unique() as $category)
+                        <button type="button" data-service-filter="{{ $category }}" class="service-filter shrink-0 rounded-full border border-[var(--soft-sandstone)] bg-white/70 px-4 py-2 text-xs font-semibold text-[var(--ink)]">{{ $category }}</button>
+                    @endforeach
+                </div>
+                <select id="field_service" name="service_ids[]" multiple class="hidden" aria-hidden="true">
                     @foreach($services as $service)
                         <option value="{{ $service->id }}"
                                 data-category="{{ $service->category }}"
                                 data-requires-consent="{{ $service->requires_consent ? '1' : '0' }}"
-                                {{ old('service_id') == $service->id ? 'selected' : '' }}>
-                            {{ $service->name }}
+                                data-price="{{ $service->price }}"
+                                data-session-count="{{ $service->session_count }}"
+                                {{ $oldServiceIds->contains($service->id) ? 'selected' : '' }}>
+                            {{ $service->name }} — PHP {{ number_format($service->price, 2) }}
                         </option>
                     @endforeach
                 </select>
+                <p class="mb-2 text-sm font-semibold text-[var(--ink)]">3. Tap one or more services</p>
+                <div class="rounded-2xl border border-[var(--soft-sandstone)]/45 bg-white/35 p-3 sm:p-4">
+                    <div id="primaryClientHeader" class="mb-3 {{ old('party_size', 1) > 1 ? 'flex' : 'hidden' }} items-center justify-between gap-3"><strong class="text-sm text-[var(--ink)]">Client 1</strong><span class="text-xs text-[var(--muted)]">Primary client</span></div>
+                    <input type="hidden" id="participantPrimaryName" name="participants[0][name]" value="{{ old('full_name') }}">
+                <div id="serviceChoiceGrid" class="grid max-h-80 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+                    @foreach($services as $service)
+                    <label class="service-choice min-w-0 cursor-pointer overflow-hidden rounded-xl border border-[var(--soft-sandstone)]/55 bg-white/65 p-3 transition sm:p-4" data-service-category="{{ $service->category }}">
+                        <input type="checkbox" name="participants[0][service_ids][]" value="{{ $service->id }}" data-price="{{ $service->price }}" data-session-count="{{ $service->session_count }}" class="service-choice-input sr-only" {{ $firstServiceIds->contains($service->id) ? 'checked' : '' }}>
+                        <span class="flex items-start justify-between gap-3">
+                            <span class="min-w-0"><span class="block break-words text-sm font-semibold text-[var(--ink)]">{{ $service->name }}</span><span class="mt-1 block text-xs text-[var(--muted)]">{{ $service->category }}{{ $service->session_count > 1 ? ' · '.$service->session_count.' sessions · Solo only' : '' }}</span></span>
+                            <span class="shrink-0 text-xs font-bold text-[var(--desert-rock)] sm:text-sm">PHP {{ number_format($service->price, 2) }}</span>
+                        </span>
+                    </label>
+                    @endforeach
+                </div>
+                </div>
+                <div id="additionalParticipants" class="mt-3 space-y-3"></div>
+                <p id="packageBookingNotice" class="mt-3 hidden rounded-xl bg-violet-50 p-3 text-xs font-semibold text-violet-700">Multi-session packages are reserved for one client and cannot be combined with other services.</p>
                 <p id="hint_service" class="field-hint hidden"></p>
             </div>
 
             {{-- Date & Time --}}
+            <div class="order-1 rounded-2xl border border-[var(--soft-sandstone)]/45 bg-white/45 p-4">
+                <p class="mb-3 text-sm font-semibold text-[var(--ink)]">1. Is this a solo or group booking?</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" data-booking-type="solo" aria-pressed="{{ old('party_size', 1) == 1 ? 'true' : 'false' }}" class="booking-type-button rounded-xl border border-[var(--soft-sandstone)] px-4 py-3 text-sm font-semibold">Solo</button>
+                    <button type="button" data-booking-type="group" aria-pressed="{{ old('party_size', 1) > 1 ? 'true' : 'false' }}" class="booking-type-button rounded-xl border border-[var(--soft-sandstone)] px-4 py-3 text-sm font-semibold">Group</button>
+                </div>
+                <div id="groupSizeField" class="mt-3 {{ old('party_size', 1) > 1 ? '' : 'hidden' }}">
+                <label for="field_party_size" class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">How many clients?</label>
+                <input type="number" id="field_party_size" name="party_size" min="1" max="50"
+                       value="{{ old('party_size', 1) }}" class="form-field w-full rounded-xl p-4" required>
+                </div>
+            </div>
+
+            <div class="order-3 rounded-2xl bg-[var(--creamed-oat)]/45 p-4">
+                <div class="flex justify-between gap-4 text-sm"><span class="text-[var(--muted)]">Selected services</span><strong id="estimateServiceCount">0</strong></div>
+                <div class="mt-2 flex justify-between gap-4 text-sm"><span class="text-[var(--muted)]">Clients</span><strong id="estimateClientCount">1</strong></div>
+                <div class="mt-3 flex justify-between gap-4 border-t border-[var(--soft-sandstone)]/50 pt-3"><span class="font-semibold text-[var(--ink)]">Estimated total</span><strong id="estimateTotal" class="text-lg text-[var(--desert-rock)]">PHP 0.00</strong></div>
+            </div>
+            </div>
+
+            <div data-booking-step="3" class="hidden space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <input type="date" id="field_date" name="date"
@@ -658,19 +741,32 @@
                           class="form-field w-full p-4 rounded-xl resize-none">{{ old('notes') }}</textarea>
             </div>
 
-            <x-consent-form
-                section-id="consentSection"
-                canvas-id="signatureCanvas"
-                signature-input-id="consent_signature"
-                accepted-input-id="consent_accepted"
-                hint-id="hint_consent"
-                clear-function="clearSignature"
-            />
+            <div id="consentAtStoreNotice" class="hidden rounded-xl bg-[var(--creamed-oat)]/45 p-4 text-sm text-[var(--ink)]">
+                Consent for the selected service will be reviewed and signed at the store before treatment.
+            </div>
+            </div>
 
+            <div data-booking-step="4" class="hidden space-y-4">
+                <div class="rounded-2xl border border-[var(--soft-sandstone)]/45 bg-white/55 p-5">
+                    <h3 class="text-lg font-semibold text-[var(--ink)]">Review your booking</h3>
+                    <div class="mt-4 space-y-3 text-sm">
+                        <div class="flex justify-between gap-4"><span class="text-[var(--muted)]">Contact</span><strong id="wizardReviewContact" class="text-right"></strong></div>
+                        <div class="flex justify-between gap-4"><span class="text-[var(--muted)]">Clients</span><strong id="wizardReviewClients"></strong></div>
+                        <div class="flex justify-between gap-4"><span class="text-[var(--muted)]">Services</span><strong id="wizardReviewServices"></strong></div>
+                        <div class="flex justify-between gap-4"><span class="text-[var(--muted)]">Schedule</span><strong id="wizardReviewSchedule" class="text-right"></strong></div>
+                        <div class="flex justify-between gap-4 border-t border-[var(--soft-sandstone)]/45 pt-3"><span class="font-semibold">Estimated total</span><strong id="wizardReviewTotal" class="text-[var(--desert-rock)]"></strong></div>
+                    </div>
+                </div>
             <button type="button" onclick="openConfirmModal()"
                     class="w-full btn-gold py-3.5 rounded-xl tracking-wide transition-all duration-200 active:scale-[.98]">
-                Submit Appointment Request
+                Confirm Appointment Request
             </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button id="bookingStepBack" type="button" class="invisible rounded-xl border border-[var(--soft-sandstone)] px-4 py-3 text-sm font-semibold text-[var(--ink)]">Back</button>
+                <button id="bookingStepNext" type="button" class="btn-gold rounded-xl px-4 py-3 text-sm font-semibold">Continue</button>
+            </div>
         </form>
         </div>
     </div>
@@ -704,6 +800,7 @@
             <p><strong class="text-[var(--ink)]">Contact:</strong> <span id="previewContact"></span></p>
             <p><strong class="text-[var(--ink)]">Email:</strong>   <span id="previewEmail"></span></p>
             <p><strong class="text-[var(--ink)]">Service:</strong> <span id="previewService"></span></p>
+            <p><strong class="text-[var(--ink)]">Clients:</strong> <span id="previewPartySize"></span></p>
             <p><strong class="text-[var(--ink)]">Date:</strong>    <span id="previewDate"></span></p>
             <p><strong class="text-[var(--ink)]">Time:</strong>    <span id="previewTime"></span></p>
             <p><strong class="text-[var(--ink)]">Notes:</strong>   <span id="previewNotes"></span></p>
@@ -788,29 +885,78 @@ document.querySelectorAll('[data-book-service]').forEach((link) => {
 
         categoryField.value = link.dataset.bookCategory;
         filterClientServices(categoryField.value);
-        serviceField.value = link.dataset.bookService;
-        serviceField.dispatchEvent(new Event('change', { bubbles: true }));
+        const option = Array.from(serviceField.options).find(item => item.value === link.dataset.bookService);
+        if (option) option.selected = true;
+        const firstClientChoice = document.querySelector(`input[name="participants[0][service_ids][]"][value="${link.dataset.bookService}"]`);
+        if (firstClientChoice) {
+            firstClientChoice.checked = true;
+            firstClientChoice.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+            syncParticipantServices();
+            serviceField.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     });
 });
 
 function filterClientServices(category, preserveSelection = false) {
     const serviceField = document.getElementById('field_service');
     if (!serviceField) return;
-
-    const previousValue = preserveSelection ? serviceField.value : '';
-    Array.from(serviceField.options).forEach((option) => {
-        if (!option.value) {
-            option.textContent = category ? 'Select Service' : 'Select a category first';
-            return;
-        }
-
-        const visible = option.dataset.category === category;
-        option.hidden = !visible;
-        option.disabled = !visible;
+    Array.from(serviceField.options).forEach(option => option.disabled = false);
+    document.querySelectorAll('[data-service-category]').forEach(card => {
+        const selected = card.querySelector('.service-choice-input')?.checked;
+        card.classList.toggle('hidden', category && category !== 'all' && card.dataset.serviceCategory !== category && !selected);
     });
+}
 
-    serviceField.disabled = !category;
-    serviceField.value = previousValue;
+function syncParticipantServices() {
+    const selected = new Set(Array.from(document.querySelectorAll('.service-choice-input:checked')).map(input => input.value));
+    Array.from(document.getElementById('field_service').options).forEach(option => option.selected = selected.has(option.value));
+}
+
+function updateBookingEstimate() {
+    const checkedServices = Array.from(document.querySelectorAll('.service-choice-input:checked'));
+    const clients = Math.max(1, Number(document.getElementById('field_party_size')?.value) || 1);
+    const total = checkedServices.reduce((sum, input) => sum + Number(input.dataset.price || 0), 0);
+    document.getElementById('estimateServiceCount').textContent = checkedServices.length;
+    document.getElementById('estimateClientCount').textContent = clients;
+    document.getElementById('estimateTotal').textContent = `PHP ${total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+const bookingServiceCatalog = @json($bookingServiceCatalog);
+const previousParticipants = @json(array_values(old('participants', [])));
+
+function bookingEscape(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+}
+
+function renderAdditionalParticipants(count) {
+    const container = document.getElementById('additionalParticipants');
+    const current = {};
+    container.querySelectorAll('[data-participant-card]').forEach(card => {
+        const index = Number(card.dataset.participantCard);
+        current[index] = {
+            name: card.querySelector('[data-participant-name]')?.value || '',
+            service_ids: Array.from(card.querySelectorAll('.service-choice-input:checked')).map(input => input.value),
+        };
+    });
+    container.innerHTML = '';
+
+    for (let index = 1; index < count; index++) {
+        const saved = current[index] || previousParticipants[index] || {};
+        const selected = new Set((saved.service_ids || []).map(String));
+        const services = bookingServiceCatalog.map(service => `
+            <label class="service-choice min-w-0 cursor-pointer overflow-hidden rounded-xl border border-[var(--soft-sandstone)]/55 bg-white/65 p-3 transition" data-service-category="${bookingEscape(service.category)}">
+                <input type="checkbox" name="participants[${index}][service_ids][]" value="${service.id}" data-price="${service.price}" data-session-count="${service.session_count}" class="service-choice-input sr-only" ${selected.has(String(service.id)) ? 'checked' : ''}>
+                <span class="flex items-start justify-between gap-3"><span class="min-w-0"><span class="block break-words text-sm font-semibold text-[var(--ink)]">${bookingEscape(service.name)}</span><span class="mt-1 block text-xs text-[var(--muted)]">${bookingEscape(service.category)}${service.session_count > 1 ? ` · ${service.session_count} sessions · Solo only` : ''}</span></span><span class="shrink-0 text-xs font-bold text-[var(--desert-rock)]">PHP ${Number(service.price).toFixed(2)}</span></span>
+            </label>`).join('');
+        container.insertAdjacentHTML('beforeend', `
+            <div data-participant-card="${index}" class="rounded-2xl border border-[var(--soft-sandstone)]/45 bg-white/35 p-3 sm:p-4">
+                <div class="mb-3"><label class="mb-1 block text-xs font-semibold text-[var(--muted)]">Client ${index + 1} name (optional)</label><input data-participant-name name="participants[${index}][name]" value="${bookingEscape(saved.name || '')}" class="form-field w-full rounded-xl p-3" placeholder="Client ${index + 1}"></div>
+                <div class="grid max-h-72 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">${services}</div>
+            </div>`);
+    }
+    syncParticipantServices();
+    updateBookingEstimate();
 }
 
 /* Capacity check */
@@ -864,12 +1010,99 @@ function formatTime(time) {
 
 /* Set date min on load */
 document.addEventListener('DOMContentLoaded', function () {
+    const navigationEntry = performance.getEntriesByType('navigation')[0];
+    if (navigationEntry?.type === 'reload') {
+        ['field_name', 'field_contact', 'field_email', 'field_date', 'field_notes'].forEach(id => {
+            const field = document.getElementById(id); if (field) field.value = '';
+        });
+        document.getElementById('field_time').value = '';
+        document.getElementById('field_party_size').value = 1;
+        document.getElementById('participantPrimaryName').value = '';
+        document.querySelectorAll('.service-choice-input').forEach(input => input.checked = false);
+        Array.from(document.getElementById('field_service').options).forEach(option => option.selected = false);
+        document.querySelectorAll('[data-booking-type]').forEach(button => button.setAttribute('aria-pressed', button.dataset.bookingType === 'solo' ? 'true' : 'false'));
+        document.getElementById('groupSizeField').classList.add('hidden');
+        document.getElementById('primaryClientHeader').classList.add('hidden');
+        document.getElementById('primaryClientHeader').classList.remove('flex');
+    }
     const categoryField = document.getElementById('field_service_category');
-    filterClientServices(categoryField?.value || '', true);
+    filterClientServices('all', true);
     categoryField?.addEventListener('change', () => {
         filterClientServices(categoryField.value);
         document.getElementById('field_service')?.dispatchEvent(new Event('change', { bubbles: true }));
     });
+
+    document.querySelectorAll('.service-filter').forEach(button => button.addEventListener('click', () => {
+        const category = button.dataset.serviceFilter;
+        categoryField.value = category === 'all' ? '' : category;
+        filterClientServices(category);
+        document.querySelectorAll('.service-filter').forEach(item => {
+            const active = item === button;
+            item.classList.toggle('bg-[var(--desert-rock)]', active);
+            item.classList.toggle('text-white', active);
+            item.classList.toggle('bg-white/70', !active);
+            item.classList.toggle('text-[var(--ink)]', !active);
+        });
+    }));
+
+    document.getElementById('bookingForm')?.addEventListener('change', event => {
+        if (!event.target.classList.contains('service-choice-input')) return;
+        const changed = event.target;
+        if (changed.checked && Number(changed.dataset.sessionCount || 1) > 1) {
+            document.querySelectorAll('.service-choice-input').forEach(input => { if (input !== changed) input.checked = false; });
+            document.getElementById('field_party_size').value = 1;
+            document.querySelectorAll('[data-booking-type]').forEach(button => button.setAttribute('aria-pressed', button.dataset.bookingType === 'solo' ? 'true' : 'false'));
+            document.getElementById('groupSizeField').classList.add('hidden');
+            document.getElementById('primaryClientHeader').classList.add('hidden');
+            document.getElementById('primaryClientHeader').classList.remove('flex');
+            renderAdditionalParticipants(1);
+            document.getElementById('packageBookingNotice').classList.remove('hidden');
+        } else if (changed.checked) {
+            document.querySelectorAll('.service-choice-input[data-session-count]').forEach(input => {
+                if (Number(input.dataset.sessionCount || 1) > 1) input.checked = false;
+            });
+            document.getElementById('packageBookingNotice').classList.add('hidden');
+        } else if (!document.querySelector('.service-choice-input[data-session-count]:checked')) {
+            document.getElementById('packageBookingNotice').classList.add('hidden');
+        }
+        syncParticipantServices();
+        filterClientServices(categoryField?.value || 'all');
+        document.getElementById('field_service').dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    document.querySelectorAll('[data-booking-type]').forEach(button => button.addEventListener('click', () => {
+        const group = button.dataset.bookingType === 'group';
+        if (group) {
+            document.querySelectorAll('.service-choice-input').forEach(input => {
+                if (Number(input.dataset.sessionCount || 1) > 1) input.checked = false;
+            });
+            document.getElementById('packageBookingNotice').classList.add('hidden');
+            syncParticipantServices();
+        }
+        document.querySelectorAll('[data-booking-type]').forEach(item => item.setAttribute('aria-pressed', item === button ? 'true' : 'false'));
+        document.getElementById('groupSizeField').classList.toggle('hidden', !group);
+        document.getElementById('primaryClientHeader').classList.toggle('hidden', !group);
+        document.getElementById('primaryClientHeader').classList.toggle('flex', group);
+        document.getElementById('field_party_size').value = group ? Math.max(2, Number(document.getElementById('field_party_size').value) || 2) : 1;
+        renderAdditionalParticipants(Number(document.getElementById('field_party_size').value));
+        updateBookingEstimate();
+    }));
+
+    document.getElementById('field_party_size')?.addEventListener('input', event => {
+        const count = Math.max(1, Math.min(50, Number(event.target.value) || 1));
+        event.target.value = count;
+        if (count === 1) {
+            document.querySelectorAll('[data-booking-type]').forEach(button => button.setAttribute('aria-pressed', button.dataset.bookingType === 'solo' ? 'true' : 'false'));
+            document.getElementById('groupSizeField').classList.add('hidden');
+            document.getElementById('primaryClientHeader').classList.add('hidden');
+            document.getElementById('primaryClientHeader').classList.remove('flex');
+        }
+        renderAdditionalParticipants(count);
+    });
+    document.getElementById('field_name')?.addEventListener('input', event => document.getElementById('participantPrimaryName').value = event.target.value);
+    renderAdditionalParticipants(Math.max(1, Number(document.getElementById('field_party_size')?.value) || 1));
+    syncParticipantServices();
+    updateBookingEstimate();
 
     const dateField = document.getElementById('field_date');
     if (dateField) {
@@ -962,53 +1195,41 @@ function validateEmail() {
 }
 
 function validateService() {
-    const val = document.getElementById('field_service').value;
-    if (!val) {
-        setHint('hint_service', 'Please select a service.', 'error');
+    const selected = document.getElementById('field_service').selectedOptions;
+    const clientCount = Math.max(1, Number(document.getElementById('field_party_size')?.value) || 1);
+    const everyClientHasService = Array.from({ length: clientCount }, (_, index) =>
+        document.querySelectorAll(`input[name="participants[${index}][service_ids][]"]:checked`).length > 0
+    ).every(Boolean);
+    if (!selected.length || !everyClientHasService) {
+        setHint('hint_service', 'Please select at least one service for every client.', 'error');
         setFieldState('field_service', false);
+        document.getElementById('serviceChoiceGrid')?.classList.add('rounded-xl', 'ring-2', 'ring-red-400');
         return false;
     }
     setHint('hint_service', '', '');
     setFieldState('field_service', true);
+    document.getElementById('serviceChoiceGrid')?.classList.remove('ring-2', 'ring-red-400');
     return true;
+}
+
+function validatePartySize() {
+    const field = document.getElementById('field_party_size');
+    const value = Number(field.value);
+    const valid = Number.isInteger(value) && value >= 1 && value <= 50;
+    setFieldState('field_party_size', valid);
+    return valid;
 }
 
 function selectedServiceRequiresConsent() {
     const select = document.getElementById('field_service');
-    return select?.options[select.selectedIndex]?.dataset.requiresConsent === '1';
+    return Array.from(select?.selectedOptions || []).some(option => option.dataset.requiresConsent === '1');
 }
 
 function toggleConsentSection() {
-    const section = document.getElementById('consentSection');
-    if (!section) return;
-
-    section.classList.toggle('hidden', !selectedServiceRequiresConsent());
-    if (!selectedServiceRequiresConsent()) {
-        clearSignature();
-        const accepted = document.getElementById('consent_accepted');
-        if (accepted) accepted.checked = false;
-        setHint('hint_consent', '', '');
-    } else {
-        resizeSignatureCanvas();
-    }
+    document.getElementById('consentAtStoreNotice')?.classList.toggle('hidden', !selectedServiceRequiresConsent());
 }
 
 function validateConsent() {
-    if (!selectedServiceRequiresConsent()) return true;
-
-    if (!document.getElementById('consent_accepted')?.checked) {
-        setHint('hint_consent', 'Please read and accept the consent statements.', 'error');
-        document.getElementById('consentSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return false;
-    }
-
-    if (!document.getElementById('consent_signature').value) {
-        setHint('hint_consent', 'Signature is required for this service.', 'error');
-        document.getElementById('consentSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return false;
-    }
-
-    setHint('hint_consent', 'Consent signed.', 'ok');
     return true;
 }
 
@@ -1058,6 +1279,7 @@ document.getElementById('field_name')?.addEventListener('blur', validateName);
 document.getElementById('field_contact')?.addEventListener('blur', validateContact);
 document.getElementById('field_email')?.addEventListener('blur', validateEmail);
 document.getElementById('field_service')?.addEventListener('change', () => {
+    updateBookingEstimate();
     validateService();
     toggleConsentSection();
     updateAvailableTimes();
@@ -1065,17 +1287,54 @@ document.getElementById('field_service')?.addEventListener('change', () => {
 });
 document.getElementById('field_time')?.addEventListener('change', validateTime);
 
+let currentBookingStep = 1;
+const bookingStepTitles = ['Your details', 'Clients and services', 'Date and time', 'Review booking'];
+
+function showBookingStep(step) {
+    currentBookingStep = Math.max(1, Math.min(4, step));
+    document.querySelectorAll('[data-booking-step]').forEach(panel => panel.classList.toggle('hidden', Number(panel.dataset.bookingStep) !== currentBookingStep));
+    document.getElementById('bookingStepProgress').style.width = `${currentBookingStep * 25}%`;
+    document.getElementById('bookingStepTitle').textContent = `Step ${currentBookingStep} of 4 — ${bookingStepTitles[currentBookingStep - 1]}`;
+    document.getElementById('bookingStepBack').classList.toggle('invisible', currentBookingStep === 1);
+    document.getElementById('bookingStepNext').classList.toggle('hidden', currentBookingStep === 4);
+    if (currentBookingStep === 4) updateWizardReview();
+}
+
+function validateBookingStep(step) {
+    if (step === 1) return validateName() && validateContact() && validateEmail();
+    if (step === 2) return validatePartySize() && validateService();
+    if (step === 3) return validateDate() && validateTime();
+    return true;
+}
+
+function updateWizardReview() {
+    document.getElementById('wizardReviewContact').textContent = `${document.getElementById('field_name').value} · ${document.getElementById('field_contact').value}`;
+    document.getElementById('wizardReviewClients').textContent = document.getElementById('field_party_size').value;
+    document.getElementById('wizardReviewServices').textContent = document.querySelectorAll('.service-choice-input:checked').length;
+    document.getElementById('wizardReviewSchedule').textContent = `${formatDateFriendly(document.getElementById('field_date').value)} · ${formatTime(document.getElementById('field_time').value)}`;
+    document.getElementById('wizardReviewTotal').textContent = document.getElementById('estimateTotal').textContent;
+}
+
+document.getElementById('bookingStepNext')?.addEventListener('click', () => {
+    if (!validateBookingStep(currentBookingStep)) return;
+    showBookingStep(currentBookingStep + 1);
+    document.getElementById('book')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+document.getElementById('bookingStepBack')?.addEventListener('click', () => showBookingStep(currentBookingStep - 1));
+showBookingStep(1);
+
 /* Open confirm modal */
 function openConfirmModal() {
     const okName    = validateName();
     const okContact = validateContact();
     const okEmail   = validateEmail();
     const okService = validateService();
+    const okPartySize = validatePartySize();
     const okDate    = validateDate();
     const okTime    = validateTime();
     const okConsent = validateConsent();
 
-    if (!okName || !okContact || !okEmail || !okService || !okDate || !okTime || !okConsent) {
+    if (!okName || !okContact || !okEmail || !okService || !okPartySize || !okDate || !okTime || !okConsent) {
         // Scroll to first error
         const firstErr = document.querySelector('.field-error');
         firstErr?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1095,7 +1354,8 @@ function openConfirmModal() {
     document.getElementById('previewName').textContent    = document.getElementById('field_name').value.trim();
     document.getElementById('previewContact').textContent = document.getElementById('field_contact').value.trim();
     document.getElementById('previewEmail').textContent   = document.getElementById('field_email').value.trim() || 'Not provided';
-    document.getElementById('previewService').textContent = serviceSelect.options[serviceSelect.selectedIndex]?.text ?? '';
+    document.getElementById('previewService').textContent = Array.from(serviceSelect.selectedOptions).map(option => option.text).join(', ');
+    document.getElementById('previewPartySize').textContent = document.getElementById('field_party_size').value;
     document.getElementById('previewDate').textContent    = formatDateFriendly(dateVal);
     document.getElementById('previewTime').textContent    = formatTime(document.getElementById('field_time').value);
     document.getElementById('previewNotes').textContent   = document.getElementById('field_notes').value.trim() || 'None';

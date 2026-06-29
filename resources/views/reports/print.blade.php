@@ -102,7 +102,7 @@
                 @forelse($appointments as $appointment)
                     <tr>
                         <td>{{ $appointment->full_name }}</td>
-                        <td>{{ $appointment->service->name ?? 'Unavailable' }}</td>
+                        <td>{{ $appointment->service_names }}</td>
                         <td>{{ $appointment->date }} {{ $appointment->formatted_time }}</td>
                         <td>{{ ucfirst($appointment->status) }}</td>
                     </tr>
@@ -137,7 +137,7 @@
                                 <br>{{ $appointment->email }}
                             @endif
                         </td>
-                        <td>{{ $appointment->service->name ?? 'Unavailable' }}</td>
+                        <td>{{ $appointment->service_names }}</td>
                         <td>{{ ucfirst($appointment->invoice->payment_method ?? 'unpaid') }}</td>
                         <td class="right">&#8369;{{ number_format($appointment->invoice?->amount_paid ?? 0, 2) }}</td>
                     </tr>

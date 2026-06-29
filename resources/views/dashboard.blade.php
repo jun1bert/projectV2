@@ -106,7 +106,7 @@
                                     <span class="shrink-0 text-[10px] font-bold text-[var(--desert-rock)]">{{ $appointment->formatted_time }}</span>
                                 </div>
                                 <div class="mt-1 flex items-center justify-between gap-2">
-                                    <span class="truncate text-[10px] font-semibold text-[var(--muted)]">{{ $appointment->service->name ?? 'Service' }}</span>
+                                    <span class="truncate text-[10px] font-semibold text-[var(--muted)]">{{ $appointment->service_names }}</span>
                                     <span class="rounded-full px-2 py-0.5 text-[9px] font-bold {{ $badgeClass[$appointment->status] ?? 'bg-white text-[var(--muted)] ring-1 ring-[var(--soft-sandstone)]' }}">
                                         {{ ucfirst($appointment->status) }}
                                     </span>
@@ -142,7 +142,7 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="truncate text-sm font-bold text-[var(--ink)]">{{ $appointment->full_name }}</p>
-                            <p class="mt-1 text-xs font-semibold text-[var(--muted)]">{{ $appointment->service->name ?? 'Service' }}</p>
+                            <p class="mt-1 text-xs font-semibold text-[var(--muted)]">{{ $appointment->service_names }}</p>
                         </div>
                         <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold {{ $badgeClass[$appointment->status] ?? 'bg-white text-[var(--muted)] ring-1 ring-[var(--soft-sandstone)]' }}">
                             {{ ucfirst($appointment->status) }}

@@ -11,6 +11,7 @@ class Appointment extends Model
         'full_name',
         'contact_number',
         'email',
+        'party_size',
         'client_id',
         'service_id',
         'service_package_id',
@@ -28,6 +29,7 @@ class Appointment extends Model
         'completion_notified_at' => 'datetime',
         'price_at_booking' => 'decimal:2',
         'package_session_consumed' => 'boolean',
+        'party_size' => 'integer',
     ];
 
     public function assignedStaffMembers()
@@ -67,6 +69,47 @@ class Appointment extends Model
     public function service()
     {
         return $this->belongsTo(Service::class)->withTrashed();
+    }
+
+    public function services()
+    {
+        return $this->belongsToMany(Service::class)
+            ->withPivot('price_at_booking')
+            ->withTimestamps()
+            ->withTrashed();
+    }
+
+    public function participants()
+    {
+        return $this->hasMany(AppointmentParticipant::class)->orderBy('position');
+    }
+
+    public function getServiceNamesAttribute(): string
+    {
+        $services = $this->relationLoaded('services') ? $this->services : $this->services()->get();
+
+        return $services->pluck('name')->join(', ') ?: ($this->service?->name ?? 'No service');
+    }
+
+    public function getServicesTotalAttribute(): float
+    {
+        $services = $this->relationLoaded('services') ? $this->services : $this->services()->get();
+
+        if ($this->participants()->exists()) {
+            $participants = $this->relationLoaded('participants') ? $this->participants : $this->participants()->with('services')->get();
+            return (float) $participants->sum(fn ($participant) => $participant->total);
+        }
+
+        $perClient = $services->isNotEmpty()
+            ? (float) $services->sum(fn ($service) => (float) $service->pivot->price_at_booking)
+            : (float) ($this->price_at_booking ?? $this->service?->price ?? 0);
+
+        return $perClient * max(1, (int) $this->party_size);
+    }
+
+    public function getPerClientTotalAttribute(): float
+    {
+        return $this->services_total / max(1, (int) $this->party_size);
     }
 
     public function invoice()

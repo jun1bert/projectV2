@@ -202,6 +202,18 @@ thead td {
         <span>{{ ucfirst($invoice->payment_method) }}</span>
     </div>
 
+    <div class="row">
+        <span>Booking size</span>
+        <span>{{ $invoice->appointment->party_size }} client{{ $invoice->appointment->party_size === 1 ? '' : 's' }}</span>
+    </div>
+
+    @foreach($invoice->appointment->participants as $participant)
+    <div class="row">
+        <span>{{ $participant->display_name }} — {{ $participant->services->pluck('name')->join(', ') }}</span>
+        <span>PHP {{ number_format($participant->total, 2) }}</span>
+    </div>
+    @endforeach
+
     @if($invoice->appointment)
     <hr class="divider">
 
@@ -230,7 +242,7 @@ thead td {
     <div class="section-title">Service</div>
 
     <div class="row">
-        <span>{{ $invoice->appointment->service->name ?? 'Service' }}</span>
+        <span>{{ $invoice->appointment->service_names }}</span>
         <span>PHP {{ number_format($invoice->service_total, 2) }}</span>
     </div>
 
@@ -268,7 +280,7 @@ thead td {
     <div class="section-title">Payment History</div>
     @foreach($invoice->payments as $payment)
         <div class="row">
-            <span>{{ $payment->created_at->format('M d, Y g:i A') }} &middot; {{ ucfirst($payment->payment_method) }}</span>
+            <span>{{ $payment->created_at->format('M d, Y g:i A') }} &middot; {{ ucfirst($payment->payment_method) }}@if($payment->payment_scope === 'per_client') &middot; {{ $payment->participants->pluck('display_name')->join(', ') ?: $payment->client_count.' client(s)' }}@endif</span>
             <span>PHP {{ number_format($payment->amount, 2) }}</span>
         </div>
     @endforeach

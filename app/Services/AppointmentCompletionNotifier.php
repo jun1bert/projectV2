@@ -109,7 +109,7 @@ class AppointmentCompletionNotifier
 
     private function message(Appointment $appointment): string
     {
-        $service = $appointment->service->name ?? 'your service';
+        $service = $appointment->service_names ?: 'your service';
 
         return "Hi {$appointment->full_name}, thank you for visiting Martinis & Manicures. Your {$service} appointment has been completed. We hope to see you again soon.";
     }

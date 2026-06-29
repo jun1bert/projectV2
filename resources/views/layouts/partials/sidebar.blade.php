@@ -7,7 +7,13 @@
             'label' => 'Overview',
             'href' => route('dashboard'),
             'active' => request()->routeIs('dashboard'),
-            'roles' => null,
+            'roles' => ['admin', 'staff', 'reception', 'management'],
+        ],
+        [
+            'label' => 'My Bookings',
+            'href' => route('customer.bookings.index'),
+            'active' => request()->routeIs('customer.bookings.*'),
+            'roles' => ['customer'],
         ],
         [
             'label' => 'Appointments',
@@ -60,7 +66,7 @@
     </a>
 
     <p class="mt-4 px-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-        Spa Management
+        {{ $role === 'customer' ? 'Client Portal' : 'Spa Management' }}
     </p>
 
     <nav class="mt-8 space-y-2 text-sm font-semibold">

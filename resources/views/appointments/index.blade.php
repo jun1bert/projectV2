@@ -220,9 +220,9 @@
             <tbody class="divide-y divide-[rgba(164,141,120,.14)]">
             @forelse($appointments as $appointment)
                 <tr class="filter-row transition hover:bg-[rgba(230,218,200,.24)]"
-                    data-search="{{ strtolower($appointment->full_name.' '.$appointment->contact_number.' '.($appointment->email ?? '').' '.($appointment->service->name ?? '').' '.$appointment->status.' '.($appointment->booking_type ?? 'online')) }}"
+                    data-search="{{ strtolower($appointment->full_name.' '.$appointment->contact_number.' '.($appointment->email ?? '').' '.$appointment->service_names.' '.$appointment->status.' '.($appointment->booking_type ?? 'online')) }}"
                     data-status="{{ $appointment->status }}"
-                    data-price="{{ $appointment->service->price ?? 0 }}">
+                    data-price="{{ $appointment->services_total }}">
                     <td class="px-5 py-4 align-top">
                         <p class="font-semibold text-[var(--ink)]">{{ $appointment->full_name }}</p>
                         <p class="mt-1 text-xs text-[var(--muted)]">{{ $appointment->contact_number }}</p>
@@ -232,9 +232,17 @@
                     </td>
 
                     <td class="px-5 py-4 align-top">
-                        <p class="font-medium text-[var(--ink)]">{{ $appointment->service->name ?? 'No service' }}</p>
-                        <p class="mt-1 text-xs text-[var(--desert-rock)]">PHP {{ number_format($appointment->service->price ?? 0, 2) }}</p>
-                        @if($appointment->service?->requires_consent)
+                        <p class="font-medium text-[var(--ink)]">{{ $appointment->service_names }}</p>
+                        <p class="mt-1 text-xs text-[var(--desert-rock)]">PHP {{ number_format($appointment->services_total, 2) }}</p>
+                        <p class="mt-1 text-xs text-[var(--muted)]">{{ $appointment->party_size }} client{{ $appointment->party_size === 1 ? '' : 's' }}</p>
+                        @if($appointment->party_size > 1)
+                        <div class="mt-2 space-y-1 text-xs text-[var(--muted)]">
+                            @foreach($appointment->participants as $participant)
+                                <p><strong>{{ $participant->display_name }}:</strong> {{ $participant->services->pluck('name')->join(', ') }}</p>
+                            @endforeach
+                        </div>
+                        @endif
+                        @if($appointment->services->contains('requires_consent', true))
                         <span class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1
                             {{ $appointment->consentForm ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">
                             {{ $appointment->consentForm ? 'Consent signed' : 'Needs consent' }}
@@ -304,6 +312,8 @@
                                     data-id="{{ $appointment->id }}">
                                 View Consent
                             </button>
+                            @elseif($appointment->services->contains('requires_consent', true))
+                            <button type="button" class="sign-consent-btn theme-button rounded-xl px-3 py-2 text-xs font-semibold" data-id="{{ $appointment->id }}" data-name="{{ $appointment->full_name }}">Sign Consent</button>
                             @endif
                         </div>
                     </td>
@@ -323,9 +333,9 @@
     <div id="mobileCards" class="grid gap-3">
         @forelse($appointments as $appointment)
         <article class="filter-row theme-card overflow-visible rounded-2xl"
-                 data-search="{{ strtolower($appointment->full_name.' '.$appointment->contact_number.' '.($appointment->email ?? '').' '.($appointment->service->name ?? '').' '.$appointment->status.' '.($appointment->booking_type ?? 'online')) }}"
+                 data-search="{{ strtolower($appointment->full_name.' '.$appointment->contact_number.' '.($appointment->email ?? '').' '.$appointment->service_names.' '.$appointment->status.' '.($appointment->booking_type ?? 'online')) }}"
                  data-status="{{ $appointment->status }}"
-                 data-price="{{ $appointment->service->price ?? 0 }}">
+                 data-price="{{ $appointment->services_total }}">
             <div class="border-b border-[rgba(164,141,120,.14)] bg-[rgba(230,218,200,.2)] p-4">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -356,17 +366,24 @@
                 <div class="grid grid-cols-[82px_1fr] gap-3">
                     <span>Service</span>
                     <span class="text-right font-medium text-[var(--ink)]">
-                        {{ $appointment->service->name ?? 'No service' }}
-                        @if($appointment->service?->requires_consent)
+                        {{ $appointment->service_names }}
+                        @if($appointment->services->contains('requires_consent', true))
                         <span class="mt-1 block text-xs font-semibold {{ $appointment->consentForm ? 'text-emerald-700' : 'text-amber-700' }}">
                             {{ $appointment->consentForm ? 'Consent signed' : 'Needs consent' }}
                         </span>
+                        @endif
+                        @if($appointment->party_size > 1)
+                        <div class="mt-2 space-y-1 text-xs font-normal text-[var(--muted)]">
+                            @foreach($appointment->participants as $participant)
+                                <p><strong>{{ $participant->display_name }}:</strong> {{ $participant->services->pluck('name')->join(', ') }}</p>
+                            @endforeach
+                        </div>
                         @endif
                     </span>
                 </div>
                 <div class="grid grid-cols-[82px_1fr] gap-3">
                     <span>Amount</span>
-                    <span class="text-right font-medium text-[var(--desert-rock)]">PHP {{ number_format($appointment->service->price ?? 0, 2) }}</span>
+                    <span class="text-right font-medium text-[var(--desert-rock)]">PHP {{ number_format($appointment->services_total, 2) }}</span>
                 </div>
                 <div class="grid grid-cols-[82px_1fr] gap-3">
                     <span>Schedule</span>
@@ -414,6 +431,8 @@
                         data-id="{{ $appointment->id }}">
                     View Consent
                 </button>
+                @elseif($appointment->services->contains('requires_consent', true))
+                <button type="button" class="sign-consent-btn theme-button rounded-xl px-3 py-2.5 text-xs font-semibold" data-id="{{ $appointment->id }}" data-name="{{ $appointment->full_name }}">Sign Consent</button>
                 @endif
             </div>
             @endif
@@ -495,20 +514,24 @@
 
                 <div>
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Service</label>
-                    <select id="walkInService" name="service_id" class="theme-field px-3 py-2.5" required>
-                        <option value="">Select a category first</option>
+                    <select id="walkInService" name="service_ids[]" multiple size="5" class="theme-field px-3 py-2.5" required>
                         @foreach($services ?? [] as $service)
                         <option value="{{ $service->id }}"
                                 data-category="{{ $service->category }}"
                                 data-requires-consent="{{ $service->requires_consent ? '1' : '0' }}"
                                 data-duration="{{ $service->duration }}">
-                            {{ $service->name }}
+                            {{ $service->name }} — PHP {{ number_format($service->price, 2) }}
                         </option>
                         @endforeach
                     </select>
+                    <p class="mt-1 text-xs text-[var(--muted)]">Choose one or more services. Packages must be booked alone.</p>
                 </div>
 
                 <div class="grid gap-3 sm:grid-cols-2">
+                    <div>
+                        <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Number of clients</label>
+                        <input type="number" name="party_size" min="1" max="50" value="1" class="theme-field px-3 py-2.5" required>
+                    </div>
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Date</label>
                         <input type="date" name="date" class="theme-field px-3 py-2.5" required>
@@ -649,8 +672,13 @@
                 </div>
 
                 <div>
+                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Number of clients</label>
+                    <input id="edit_party_size" type="number" name="party_size" min="1" max="50" class="theme-field px-3 py-2.5" required>
+                </div>
+
+                <div>
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Service</label>
-                    <select id="edit_service_id" name="service_id" class="theme-field px-3 py-2.5" required>
+                    <select id="edit_service_id" name="service_ids[]" multiple size="5" class="theme-field px-3 py-2.5" required>
                         @foreach($services ?? [] as $service)
                         <option value="{{ $service->id }}" data-duration="{{ $service->duration }}">{{ $service->name }}</option>
                         @endforeach
@@ -704,6 +732,20 @@
     </div>
 </div>
 @endif
+
+<div id="storeConsentModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+    <div class="flex min-h-full items-end justify-center p-4 sm:items-center">
+        <button type="button" class="fixed inset-0 bg-black/45 backdrop-blur-sm" onclick="closeStoreConsent()" aria-label="Close consent form"></button>
+        <div class="theme-card relative w-full max-w-2xl rounded-2xl p-5">
+            <div class="mb-4 flex items-start justify-between gap-3"><div><h2 class="text-lg font-semibold text-[var(--ink)]">In-store Client Consent</h2><p id="storeConsentClient" class="mt-1 text-xs text-[var(--muted)]"></p></div><button type="button" onclick="closeStoreConsent()" class="muted-button rounded-lg px-3 py-1.5 text-sm">Close</button></div>
+            <form id="storeConsentForm">
+                <input type="hidden" id="storeConsentAppointmentId">
+                <x-consent-form section-id="storeConsentSection" canvas-id="storeConsentCanvas" signature-input-id="storeConsentSignature" accepted-input-id="storeConsentAccepted" hint-id="storeConsentHint" clear-function="clearStoreConsentSignature" compact />
+                <button type="submit" class="theme-button mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold">Save signed consent</button>
+            </form>
+        </div>
+    </div>
+</div>
 
 <div id="consentViewModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
     <div class="flex min-h-full items-end justify-center p-4 sm:items-center">
@@ -769,14 +811,30 @@
                         <span>Remaining balance</span>
                         <span id="pm_balance" class="font-semibold text-rose-700">PHP 0.00</span>
                     </div>
+                    <div class="mt-2 flex justify-between gap-4 text-[var(--muted)]">
+                        <span>Clients</span>
+                        <span id="pm_clients" class="font-semibold text-[var(--ink)]">1</span>
+                    </div>
+                    <div class="mt-2 flex justify-between gap-4 text-[var(--muted)]">
+                        <span>Client services</span>
+                        <span class="font-semibold text-[var(--ink)]">Priced individually</span>
+                    </div>
                 </div>
 
                 <div>
                     <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Payment type</label>
                     <select name="payment_type" id="payment_type" class="theme-field px-3 py-2.5" required>
                         <option value="full">Full remaining balance</option>
+                        <option value="per_client">Pay selected client(s)</option>
                         <option value="partial">Partial payment</option>
                     </select>
+                </div>
+
+                <div id="paymentClientCountField" class="hidden">
+                    <label class="mb-1.5 block text-xs font-semibold text-[var(--muted)]">Select client(s) paying now</label>
+                    <input type="hidden" name="client_count" id="payment_client_count" value="1">
+                    <div id="paymentParticipantChoices" class="space-y-2"></div>
+                    <p id="paymentClientHint" class="mt-1 text-xs text-[var(--muted)]"></p>
                 </div>
 
                 <div>
@@ -952,18 +1010,12 @@ function filterWalkInServices(category) {
     if (!walkInService) return;
 
     Array.from(walkInService.options).forEach((option) => {
-        if (!option.value) {
-            option.textContent = category ? 'Select a service' : 'Select a category first';
-            return;
-        }
-
-        const visible = option.dataset.category === category;
+        const visible = !category || option.dataset.category === category || option.selected;
         option.hidden = !visible;
-        option.disabled = !visible;
+        option.disabled = false;
     });
 
-    walkInService.value = '';
-    walkInService.disabled = !category;
+    walkInService.disabled = false;
 }
 
 filterWalkInServices('');
@@ -1078,7 +1130,7 @@ document.addEventListener('click', (event) => {
 
 function walkInRequiresConsent() {
     const select = document.getElementById('walkInService');
-    return select?.options[select.selectedIndex]?.dataset.requiresConsent === '1';
+    return Array.from(select?.selectedOptions || []).some(option => option.dataset.requiresConsent === '1');
 }
 
 function toggleWalkInConsent() {
@@ -1129,6 +1181,17 @@ document.addEventListener('click', (event) => {
     currentServicePrice = Number(appointment.billing_total || 0);
     document.getElementById('payment_appointment_id').value = appointment.id;
     calculatePaymentTotal(appointment.billing_total, appointment.billing_paid, appointment.billing_balance);
+    document.getElementById('pm_clients').textContent = appointment.party_size || 1;
+    const unpaidParticipants = (appointment.participants || []).filter(participant => Number(participant.paid) + 0.009 < Number(participant.total));
+    document.getElementById('paymentParticipantChoices').innerHTML = unpaidParticipants.map(participant => `
+        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-[rgba(164,141,120,.2)] bg-white/60 p-3">
+            <input type="checkbox" name="participant_ids[]" value="${participant.id}" data-balance="${Math.max(0, Number(participant.total) - Number(participant.paid))}" class="payment-participant mt-1">
+            <span class="min-w-0 flex-1"><strong class="block text-sm text-[var(--ink)]">${escapeHtml(participant.name)}</strong><span class="block truncate text-xs text-[var(--muted)]">${escapeHtml(participant.services)}</span></span>
+            <strong class="text-sm text-[var(--desert-rock)]">${money(Math.max(0, Number(participant.total) - Number(participant.paid)))}</strong>
+        </label>`).join('');
+    document.getElementById('payment_client_count').value = 1;
+    document.getElementById('paymentClientHint').textContent = `${unpaidParticipants.length} client(s) with a remaining balance`;
+    document.getElementById('paymentClientCountField').classList.add('hidden');
     paymentModal.classList.remove('hidden');
     setBodyLock(true);
 });
@@ -1138,9 +1201,17 @@ document.getElementById('payment_type')?.addEventListener('change', (event) => {
     const appointment = appointmentRecords[document.getElementById('payment_appointment_id').value];
     const balance = Number(appointment?.billing_balance || 0);
     const partial = event.target.value === 'partial';
+    const perClient = event.target.value === 'per_client';
+    document.getElementById('paymentClientCountField').classList.toggle('hidden', !perClient);
     amount.readOnly = !partial;
-    amount.value = partial ? '' : balance.toFixed(2);
+    amount.value = partial ? '' : (perClient ? '0.00' : balance.toFixed(2));
     if (partial) amount.focus();
+});
+
+document.getElementById('paymentParticipantChoices')?.addEventListener('change', () => {
+    const selected = Array.from(document.querySelectorAll('.payment-participant:checked'));
+    document.getElementById('payment_client_count').value = Math.max(1, selected.length);
+    document.getElementById('payment_amount').value = selected.reduce((sum, input) => sum + Number(input.dataset.balance || 0), 0).toFixed(2);
 });
 
 document.addEventListener('click', (event) => {
@@ -1155,6 +1226,48 @@ document.addEventListener('click', (event) => {
     if (!button) return;
 
     openEditAppointmentModal(button.dataset.id);
+});
+
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('.sign-consent-btn');
+    if (!button) return;
+    document.getElementById('storeConsentAppointmentId').value = button.dataset.id;
+    document.getElementById('storeConsentClient').textContent = `${button.dataset.name} — review and sign before treatment`;
+    document.getElementById('storeConsentSection').classList.remove('hidden');
+    document.getElementById('storeConsentModal').classList.remove('hidden');
+    setBodyLock(true);
+    setTimeout(resizeStoreConsentCanvas, 50);
+});
+
+const storeConsentCanvas = document.getElementById('storeConsentCanvas');
+const storeConsentContext = storeConsentCanvas?.getContext('2d');
+let storeConsentDrawing = false;
+
+function resizeStoreConsentCanvas() {
+    if (!storeConsentCanvas || !storeConsentContext) return;
+    const width = Math.max(storeConsentCanvas.getBoundingClientRect().width, 320);
+    storeConsentCanvas.width = width; storeConsentCanvas.height = 144;
+    storeConsentContext.lineWidth = 2; storeConsentContext.lineCap = 'round'; storeConsentContext.strokeStyle = '#4d4037';
+}
+function storeConsentPoint(event) { const rect = storeConsentCanvas.getBoundingClientRect(); const source = event.touches?.[0] ?? event; return { x: source.clientX - rect.left, y: source.clientY - rect.top }; }
+function startStoreConsent(event) { event.preventDefault(); storeConsentDrawing = true; const point = storeConsentPoint(event); storeConsentContext.beginPath(); storeConsentContext.moveTo(point.x, point.y); }
+function drawStoreConsent(event) { if (!storeConsentDrawing) return; event.preventDefault(); const point = storeConsentPoint(event); storeConsentContext.lineTo(point.x, point.y); storeConsentContext.stroke(); document.getElementById('storeConsentSignature').value = storeConsentCanvas.toDataURL('image/png'); }
+function stopStoreConsent() { storeConsentDrawing = false; }
+function clearStoreConsentSignature() { storeConsentContext?.clearRect(0, 0, storeConsentCanvas.width, storeConsentCanvas.height); document.getElementById('storeConsentSignature').value = ''; }
+function closeStoreConsent() { document.getElementById('storeConsentModal').classList.add('hidden'); setBodyLock(false); clearStoreConsentSignature(); }
+storeConsentCanvas?.addEventListener('mousedown', startStoreConsent); storeConsentCanvas?.addEventListener('mousemove', drawStoreConsent); window.addEventListener('mouseup', stopStoreConsent);
+storeConsentCanvas?.addEventListener('touchstart', startStoreConsent, { passive: false }); storeConsentCanvas?.addEventListener('touchmove', drawStoreConsent, { passive: false }); window.addEventListener('touchend', stopStoreConsent);
+
+document.getElementById('storeConsentForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const accepted = document.getElementById('storeConsentAccepted')?.checked;
+    const signature = document.getElementById('storeConsentSignature').value;
+    if (!accepted || !signature) { document.getElementById('storeConsentHint').textContent = 'Acceptance and signature are required.'; return; }
+    const id = document.getElementById('storeConsentAppointmentId').value;
+    const response = await fetch(`/appointments/${id}/consent`, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ consent_accepted: true, consent_signature: signature }) });
+    const data = await response.json();
+    if (!response.ok || !data.success) { document.getElementById('storeConsentHint').textContent = data.message || 'Unable to save consent.'; return; }
+    window.location.reload();
 });
 
 document.addEventListener('click', (event) => {
@@ -1237,7 +1350,10 @@ function openEditAppointmentModal(id) {
     document.getElementById('edit_full_name').value = appointment.full_name;
     document.getElementById('edit_contact_number').value = appointment.contact_number;
     document.getElementById('edit_email').value = appointment.email || '';
-    document.getElementById('edit_service_id').value = appointment.service_id;
+    document.getElementById('edit_party_size').value = appointment.party_size || 1;
+    Array.from(document.getElementById('edit_service_id').options).forEach(option => {
+        option.selected = (appointment.service_ids || [appointment.service_id]).map(String).includes(option.value);
+    });
     document.getElementById('edit_date').value = appointment.date;
     document.getElementById('edit_time').value = appointment.time;
     document.getElementById('edit_status').value = appointment.status;
@@ -1270,7 +1386,8 @@ document.getElementById('editAppointmentForm')?.addEventListener('submit', async
     const formData = new FormData(this);
 
     if (document.getElementById('edit_service_id').disabled) {
-        formData.set('service_id', appointmentRecords[id].service_id);
+        formData.delete('service_ids[]');
+        (appointmentRecords[id].service_ids || [appointmentRecords[id].service_id]).forEach(serviceId => formData.append('service_ids[]', serviceId));
     }
 
     button.disabled = true;
@@ -1466,7 +1583,8 @@ function clearWalkInSignature() {
 
 document.getElementById('walkInService')?.addEventListener('change', () => {
     const packageOption = walkInServicePackage?.options[walkInServicePackage.selectedIndex];
-    if (packageOption?.value && packageOption.dataset.serviceId !== walkInService.value) {
+    const selectedServiceIds = Array.from(walkInService.selectedOptions).map(option => option.value);
+    if (packageOption?.value && (selectedServiceIds.length !== 1 || packageOption.dataset.serviceId !== selectedServiceIds[0])) {
         walkInServicePackage.value = '';
     }
     toggleWalkInConsent();
